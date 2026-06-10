@@ -1,0 +1,3 @@
+- [Express 5 params cast](express5-params.md) — `req.params.x` is `string | string[]`; always wrap with `String()` before parseInt.
+- [API client auth wiring](api-client-auth.md) — `setAuthTokenGetter` must be called in `main.tsx`; without it all generated hooks omit the Bearer token.
+- [RideApp architecture](rideapp-arch.md) — key decisions: in-memory token store, InDrive-style negotiation flow, GPS deep-links, driver approval flow.
