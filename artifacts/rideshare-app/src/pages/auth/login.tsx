@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { UPcarLogo } from "@/components/ui/UPcarLogo";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -62,6 +63,9 @@ export default function Login() {
         
         <Card className="border-border">
           <CardHeader className="space-y-2 text-center">
+            <div className="flex justify-center mb-2">
+              <UPcarLogo size={48} />
+            </div>
             <CardTitle className="text-2xl font-bold tracking-tight">
               Login {selectedRole && <span className={roleColor}>como {selectedRole === "driver" ? "Motorista" : "Passageiro"}</span>}
             </CardTitle>
