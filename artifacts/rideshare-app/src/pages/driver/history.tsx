@@ -1,6 +1,7 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useListRides, getListRidesQueryKey } from "@workspace/api-client-react";
+import { DriverStatusBanner } from "@/components/driver/DriverStatusBanner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Navigation, Clock, Star } from "lucide-react";
@@ -18,8 +19,10 @@ export default function DriverHistory() {
   if (isLoading) return <div className="flex-1 flex items-center justify-center"><div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" /></div>;
 
   return (
-    <div className="flex-1 p-4 space-y-4 overflow-y-auto">
-      <div className="text-lg font-bold">Historico de Corridas</div>
+    <div className="flex-1 flex flex-col overflow-y-auto">
+      <DriverStatusBanner />
+      <div className="p-4 space-y-4">
+      <div className="text-lg font-bold">Histórico de Corridas</div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3">
@@ -67,6 +70,7 @@ export default function DriverHistory() {
           </CardContent>
         </Card>
       ))}
+      </div>
     </div>
   );
 }

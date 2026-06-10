@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, MapPin, Navigation, DollarSign, Send } from "lucide-react";
+import { DriverStatusBanner } from "@/components/driver/DriverStatusBanner";
 import { useToast } from "@/hooks/use-toast";
 
 export default function DriverOffer({ params }: { params: { rideId: string } }) {
@@ -44,7 +45,9 @@ export default function DriverOffer({ params }: { params: { rideId: string } }) 
   if (!ride) return <div className="flex-1 flex items-center justify-center text-muted-foreground">Corrida não encontrada</div>;
 
   return (
-    <div className="flex-1 p-4 space-y-5 overflow-y-auto">
+    <div className="flex-1 flex flex-col overflow-y-auto">
+      <DriverStatusBanner />
+      <div className="p-4 space-y-5">
       <button onClick={() => setLocation("/driver")} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="w-4 h-4" /> Voltar
       </button>
@@ -119,6 +122,7 @@ export default function DriverOffer({ params }: { params: { rideId: string } }) 
         <Send className="w-4 h-4 mr-2" />
         {createOffer.isPending ? "Enviando..." : "Enviar Oferta"}
       </Button>
+      </div>
     </div>
   );
 }
