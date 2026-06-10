@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Menu, LogOut, Car, User, LayoutDashboard } from "lucide-react";
+import { UPcarLogo } from "@/components/ui/UPcarLogo";
 
 export function Navbar() {
   const { user, selectedRole, logout } = useAuth();
@@ -61,9 +62,7 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link href={selectedRole ? `/${selectedRole}` : "/"} className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-primary-foreground font-bold">
-            UC
-          </div>
+          <UPcarLogo size={32} />
           <span className="font-bold text-lg tracking-tight hidden sm:inline-block">
             UPcar
           </span>

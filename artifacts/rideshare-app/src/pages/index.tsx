@@ -3,6 +3,7 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Car, User, ArrowRight } from "lucide-react";
+import { UPcarLogo } from "@/components/ui/UPcarLogo";
 
 export default function RoleSelection() {
   const [, setLocation] = useLocation();
@@ -17,8 +18,8 @@ export default function RoleSelection() {
     <div className="min-h-[100dvh] flex flex-col items-center justify-center p-4 bg-background">
       <div className="w-full max-w-md space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="text-center space-y-2">
-          <div className="w-16 h-16 mx-auto bg-primary text-primary-foreground rounded-2xl flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(34,197,94,0.3)]">
-            <span className="font-bold text-2xl tracking-tighter">UC</span>
+          <div className="mb-6 drop-shadow-[0_0_20px_rgba(34,197,94,0.4)]">
+            <UPcarLogo size={64} />
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Bem-vindo ao UPcar</h1>
           <p className="text-muted-foreground">Como você deseja usar o app hoje?</p>
