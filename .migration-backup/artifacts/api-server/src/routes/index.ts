@@ -1,0 +1,20 @@
+import { Router, type IRouter } from "express";
+import healthRouter from "./health";
+import { authRouter } from "./auth";
+import { usersRouter } from "./users";
+import { driversRouter } from "./drivers";
+import { ridesRouter } from "./rides";
+import { offersRouter } from "./offers";
+import { adminRouter } from "./admin";
+
+const router: IRouter = Router();
+
+router.use(healthRouter);
+router.use("/auth", authRouter);
+router.use("/users", usersRouter);
+router.use("/drivers", driversRouter);
+router.use("/rides", ridesRouter);
+router.use("/rides/:rideId/offers", offersRouter);
+router.use("/admin", adminRouter);
+
+export default router;
