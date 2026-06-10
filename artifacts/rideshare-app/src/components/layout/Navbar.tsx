@@ -62,10 +62,10 @@ export function Navbar() {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link href={selectedRole ? `/${selectedRole}` : "/"} className="flex items-center gap-2">
           <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-primary-foreground font-bold">
-            RA
+            UC
           </div>
           <span className="font-bold text-lg tracking-tight hidden sm:inline-block">
-            RideApp
+            UPcar
           </span>
         </Link>
 

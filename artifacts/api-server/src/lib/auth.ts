@@ -5,13 +5,13 @@ import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
 const JWT_SECRET =
-  process.env.JWT_SECRET ?? "rideapp_dev_secret_change_in_production";
+  process.env.JWT_SECRET ?? "upcar_dev_secret_change_in_production";
 const JWT_EXPIRES = "7d";
 
 export function hashPassword(password: string): string {
   return crypto
     .createHash("sha256")
-    .update(password + "rideapp_salt_2024")
+    .update(password + "upcar_salt_2024")
     .digest("hex");
 }
 
