@@ -1,0 +1,85 @@
+Detalhes da implantação
+A compilação falhou.
+api/index.ts: Emissão ignorada
+Criado
+github/replit-agent
+agente de replicação
+2 minutos atrás
+Status
+Error
+Latest
+Duração
+31s
+2m ago
+Ambiente
+Produção
+Domínios
+upcar-git-main-victor-felipe-diogos-projects.vercel.app
+upcar-r6tndwqsz-victor-felipe-diogos-projects.vercel.app
+Fonte
+principal
+7fc13ea
+Atualize a configuração do banco de dados para priorizar a conexão Neon.
+
+Configurações de implantação
+3 Recomendações​
+Registros de compilação
+28s
+5 linhas de erro
+
+1
+/ 1
+
+1
+Encontre nos registros
+CtrlF
+17:07:19.493
+ 
+(!) Alguns blocos têm mais de 500 kB após a minificação. Considere:
+17:07:19.493
+ 
+- Usando importação dinâmica (dynamic import()) para dividir o código da aplicação
+17:07:19.493
+ 
+- Use `build.rollupOptions.output.manualChunks` para melhorar o particionamento: https://rollupjs.org/configuration-options/#output-manualchunks
+17:07:19.493
+ 
+- Ajuste o limite de tamanho do bloco para este aviso através de build.chunkSizeWarningLimit.
+17:07:19.493
+ 
+✓ Construído em 4,98s
+17:07:19.621
+ 
+Detectado o arquivo `pnpm-lock.yaml` versão 9, que pode ter sido gerado pelo pnpm@9.x ou pnpm@10.x.
+17:07:19.622
+ 
+Usando pnpm@10.x com base na data de criação do projeto.
+17:07:19.622
+ 
+Para usar o pnpm@9.x, habilite-o manualmente usando o corepack ( https://vercel.com/docs/deployments/configure-a-build#corepack )
+17:07:19.643
+ 
+Instalando dependências...
+17:07:19.996
+ 
+Escopo: todos os 9 projetos de espaço de trabalho
+17:07:20.105
+ 
+O arquivo de bloqueio está atualizado, a etapa de resolução foi ignorada.
+17:07:20.206
+ 
+Já está atualizado
+17:07:21.227
+ 
+17:07:21.266
+ 
+. preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+17:07:21.281
+ 
+. pré-instalação: Concluída
+17:07:21.403
+ 
+Concluído em 1,7s usando pnpm v10.28.0
+17:07:21.674
+ 
+Usando TypeScript 5.9.3 (fornecido pelo usuário local)

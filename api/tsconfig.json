@@ -2,10 +2,7 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "types": ["node"],
-    "moduleResolution": "node",
-    "module": "commonjs",
-    "esModuleInterop": true,
-    "outDir": "dist"
+    "noEmit": false
   },
   "include": ["."]
 }
