@@ -7,6 +7,8 @@ interface MapViewProps {
   driverPosition?: { lat: number; lng: number } | null;
   passengerPhotoUrl?: string | null;
   driverPhotoUrl?: string | null;
+  passengerLabel?: string;
+  driverLabel?: string;
   routePoints?: [number, number][];
   onMapClick?: (lat: number, lng: number) => void;
   className?: string;
@@ -19,11 +21,66 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-const originIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
-});
+function makePhotoIcon(photoUrl: string, borderColor: string, label?: string) {
+  const labelHtml = label
+    ? `<div style="
+        position:absolute;top:46px;left:50%;transform:translateX(-50%);
+        background:rgba(0,0,0,0.75);color:#fff;font-size:10px;font-weight:600;
+        white-space:nowrap;padding:2px 6px;border-radius:6px;
+        border:1px solid ${borderColor};backdrop-filter:blur(4px);
+        max-width:90px;overflow:hidden;text-overflow:ellipsis;
+      ">${label}</div>`
+    : '';
+  return L.divIcon({
+    className: '',
+    html: `<div style="position:relative;width:42px;">
+      <div style="
+        width:42px;height:42px;border-radius:50%;overflow:hidden;
+        border:3px solid ${borderColor};
+        box-shadow:0 2px 8px rgba(0,0,0,0.5);
+        background:#1a1a1a;
+      ">
+        <img src="${photoUrl}" style="width:100%;height:100%;object-fit:cover" />
+      </div>
+      ${labelHtml}
+    </div>`,
+    iconSize: [42, label ? 64 : 42],
+    iconAnchor: [21, 21],
+    popupAnchor: [0, -24],
+  });
+}
+
+function makeFallbackIcon(color: string, svgPath: string, label?: string) {
+  const labelHtml = label
+    ? `<div style="
+        position:absolute;top:46px;left:50%;transform:translateX(-50%);
+        background:rgba(0,0,0,0.75);color:#fff;font-size:10px;font-weight:600;
+        white-space:nowrap;padding:2px 6px;border-radius:6px;
+        border:1px solid ${color};backdrop-filter:blur(4px);
+        max-width:90px;overflow:hidden;text-overflow:ellipsis;
+      ">${label}</div>`
+    : '';
+  return L.divIcon({
+    className: '',
+    html: `<div style="position:relative;width:42px;">
+      <div style="
+        width:42px;height:42px;border-radius:50%;
+        border:3px solid ${color};
+        box-shadow:0 2px 8px rgba(0,0,0,0.5);
+        background:#1a1a1a;
+        display:flex;align-items:center;justify-content:center;
+      ">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          ${svgPath}
+        </svg>
+      </div>
+      ${labelHtml}
+    </div>`,
+    iconSize: [42, label ? 64 : 42],
+    iconAnchor: [21, 21],
+    popupAnchor: [0, -24],
+  });
+}
 
 const destinationIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
@@ -31,32 +88,14 @@ const destinationIcon = new L.Icon({
   iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
 });
 
-const driverFallbackIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
-});
-
-function makePhotoIcon(photoUrl: string, borderColor: string) {
-  return L.divIcon({
-    className: '',
-    html: `<div style="
-      width:42px;height:42px;border-radius:50%;overflow:hidden;
-      border:3px solid ${borderColor};
-      box-shadow:0 2px 8px rgba(0,0,0,0.5);
-      background:#1a1a1a;
-    ">
-      <img src="${photoUrl}" style="width:100%;height:100%;object-fit:cover" />
-    </div>`,
-    iconSize: [42, 42],
-    iconAnchor: [21, 21],
-    popupAnchor: [0, -24],
-  });
-}
+// person silhouette SVG paths
+const PERSON_PATH = `<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>`;
+const CAR_PATH = `<rect x="2" y="9" width="20" height="9" rx="2"/><path d="M16 9V7a4 4 0 0 0-8 0v2"/><circle cx="7" cy="18" r="1"/><circle cx="17" cy="18" r="1"/>`;
 
 export default function MapView({
   origin, destination, driverPosition,
   passengerPhotoUrl, driverPhotoUrl,
+  passengerLabel, driverLabel,
   routePoints, onMapClick,
   className = "h-full w-full"
 }: MapViewProps) {
@@ -81,7 +120,6 @@ export default function MapView({
   // Origin (passenger) marker
   useEffect(() => {
     if (!mapInstance.current) return;
-
     if (!origin) {
       if (markersRef.current.origin) {
         mapInstance.current.removeLayer(markersRef.current.origin);
@@ -89,22 +127,22 @@ export default function MapView({
       }
       return;
     }
-
-    const icon = passengerPhotoUrl ? makePhotoIcon(passengerPhotoUrl, '#22c55e') : originIcon;
+    const icon = passengerPhotoUrl
+      ? makePhotoIcon(passengerPhotoUrl, '#22c55e', passengerLabel)
+      : makeFallbackIcon('#22c55e', PERSON_PATH, passengerLabel);
 
     if (markersRef.current.origin) {
       markersRef.current.origin.setLatLng([origin.lat, origin.lng]);
       markersRef.current.origin.setIcon(icon);
     } else {
       markersRef.current.origin = L.marker([origin.lat, origin.lng], { icon })
-        .bindPopup('Passageiro').addTo(mapInstance.current);
+        .addTo(mapInstance.current);
     }
-  }, [origin, passengerPhotoUrl]);
+  }, [origin, passengerPhotoUrl, passengerLabel]);
 
   // Destination marker
   useEffect(() => {
     if (!mapInstance.current) return;
-
     if (!destination) {
       if (markersRef.current.destination) {
         mapInstance.current.removeLayer(markersRef.current.destination);
@@ -112,7 +150,6 @@ export default function MapView({
       }
       return;
     }
-
     if (markersRef.current.destination) {
       markersRef.current.destination.setLatLng([destination.lat, destination.lng]);
     } else {
@@ -138,7 +175,6 @@ export default function MapView({
   // Driver position marker
   useEffect(() => {
     if (!mapInstance.current) return;
-
     if (!driverPosition) {
       if (markersRef.current.driver) {
         mapInstance.current.removeLayer(markersRef.current.driver);
@@ -146,17 +182,18 @@ export default function MapView({
       }
       return;
     }
-
-    const icon = driverPhotoUrl ? makePhotoIcon(driverPhotoUrl, '#3b82f6') : driverFallbackIcon;
+    const icon = driverPhotoUrl
+      ? makePhotoIcon(driverPhotoUrl, '#3b82f6', driverLabel)
+      : makeFallbackIcon('#3b82f6', CAR_PATH, driverLabel);
 
     if (markersRef.current.driver) {
       markersRef.current.driver.setLatLng([driverPosition.lat, driverPosition.lng]);
       markersRef.current.driver.setIcon(icon);
     } else {
       markersRef.current.driver = L.marker([driverPosition.lat, driverPosition.lng], { icon })
-        .bindPopup('Motorista').addTo(mapInstance.current!);
+        .addTo(mapInstance.current!);
     }
-  }, [driverPosition, driverPhotoUrl]);
+  }, [driverPosition, driverPhotoUrl, driverLabel]);
 
   // Polyline
   useEffect(() => {

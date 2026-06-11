@@ -208,6 +208,8 @@ export default function PassengerRide({ params }: { params: { id: string } }) {
             driverPosition={driverPos}
             passengerPhotoUrl={user?.avatarUrl ?? null}
             driverPhotoUrl={(ride.driver as any)?.avatarUrl ?? null}
+            passengerLabel="Você"
+            driverLabel={ride.driver ? ride.driver.name.split(" ").slice(0, 2).join(" ") : "Motorista"}
             className="h-full w-full"
           />
         </div>
