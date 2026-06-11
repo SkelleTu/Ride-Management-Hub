@@ -78,7 +78,7 @@ export default function Login() {
         <Card className="border-border">
           <CardHeader className="space-y-2 text-center">
             <div className="flex justify-center mb-2">
-              <UPcarLogo size={48} />
+              <UPcarLogo size={90} />
             </div>
             <CardTitle className="text-2xl font-bold tracking-tight">
               Login {selectedRole && <span className={roleColor}>como {selectedRole === "driver" ? "Motorista" : "Passageiro"}</span>}
