@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useGetActiveRides, getGetActiveRidesQueryKey } from "@workspace/api-client-react";
