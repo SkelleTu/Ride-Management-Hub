@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, real } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, real, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
@@ -25,6 +25,14 @@ export const ridesTable = pgTable("rides", {
   driverLng: real("driver_lng"),
   passengerLat: real("passenger_lat"),
   passengerLng: real("passenger_lng"),
+  // ── Scheduling fields ──────────────────────────────────────────────────────
+  isScheduled: boolean("is_scheduled").notNull().default(false),
+  scheduledFor: timestamp("scheduled_for", { withTimezone: true }),
+  schedulingType: text("scheduling_type"), // 'public' | 'directed'
+  directedToDriverId: integer("directed_to_driver_id").references(() => usersTable.id),
+  scheduledStatus: text("scheduled_status"), // 'pending_acceptance' | 'confirmed' | 'driver_declined' | 'cancelled'
+  scheduledNote: text("scheduled_note"), // optional note from passenger
+  // ──────────────────────────────────────────────────────────────────────────
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

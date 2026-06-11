@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, usersTable, ridesTable, driverProfilesTable, activityLogTable, offersTable } from "@workspace/db";
-import { eq, count, sum } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { requireAdmin } from "../lib/auth";
 
 export const adminRouter = Router();
@@ -41,6 +41,51 @@ adminRouter.get("/recent-activity", requireAdmin, async (req, res) => {
   const activities = await db.select().from(activityLogTable)
     .orderBy(activityLogTable.createdAt)
     .limit(50);
-  // Return most recent first
   res.json(activities.reverse());
+});
+
+adminRouter.get("/scheduled-rides", requireAdmin, async (req, res) => {
+  const { scheduledStatus, schedulingType } = req.query as Record<string, string | undefined>;
+
+  let rides = await db.select().from(ridesTable).where(eq(ridesTable.isScheduled, true));
+  if (scheduledStatus) rides = rides.filter(r => r.scheduledStatus === scheduledStatus);
+  if (schedulingType) rides = rides.filter(r => r.schedulingType === schedulingType);
+
+  rides.sort((a, b) => {
+    const ta = a.scheduledFor ? new Date(a.scheduledFor).getTime() : 0;
+    const tb = b.scheduledFor ? new Date(b.scheduledFor).getTime() : 0;
+    return ta - tb;
+  });
+
+  const result = await Promise.all(rides.map(async (ride) => {
+    const [passenger] = await db.select().from(usersTable).where(eq(usersTable.id, ride.passengerId));
+    let driver = null;
+    if (ride.driverId) {
+      const [d] = await db.select().from(usersTable).where(eq(usersTable.id, ride.driverId));
+      if (d) {
+        const { passwordHash: _, ...s } = d;
+        const [dp] = await db.select().from(driverProfilesTable).where(eq(driverProfilesTable.userId, d.id));
+        driver = { ...s, driverProfile: dp ?? null };
+      }
+    }
+    const offers = await db.select().from(offersTable).where(eq(offersTable.rideId, ride.id));
+    const { passwordHash: _, ...safePassenger } = passenger!;
+    return { ...ride, passenger: { ...safePassenger, driverProfile: null }, driver, offers };
+  }));
+
+  res.json(result);
+});
+
+adminRouter.patch("/scheduled-rides/:id/reassign", requireAdmin, async (req, res) => {
+  const id = parseInt(String(req.params.id));
+  const { driverId } = req.body ?? {};
+  if (!driverId || typeof driverId !== "number") {
+    res.status(400).json({ error: "driverId required" }); return;
+  }
+  const [updated] = await db.update(ridesTable)
+    .set({ driverId, directedToDriverId: driverId, schedulingType: "directed", scheduledStatus: "pending_acceptance", status: "open" })
+    .where(and(eq(ridesTable.id, id), eq(ridesTable.isScheduled, true)))
+    .returning();
+  if (!updated) { res.status(404).json({ error: "Scheduled ride not found" }); return; }
+  res.json(updated);
 });

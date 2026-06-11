@@ -23,12 +23,16 @@ import DriverRide from "@/pages/driver/ride";
 import DriverProfile from "@/pages/driver/profile";
 import DriverHistory from "@/pages/driver/history";
 
+import PassengerScheduled from "@/pages/passenger/scheduled";
+import DriverScheduled from "@/pages/driver/scheduled";
+
 import AdminHome from "@/pages/admin/index";
 import AdminDrivers from "@/pages/admin/drivers";
 import AdminDriverDetail from "@/pages/admin/driver-detail";
 import AdminPassengers from "@/pages/admin/passengers";
 import AdminRides from "@/pages/admin/rides";
 import AdminUsers from "@/pages/admin/users";
+import AdminScheduled from "@/pages/admin/scheduled";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +54,13 @@ function Router() {
         <ProtectedRoute allowedRoles={["passenger", "admin"]}>
           <AppLayout>
             <PassengerHistory />
+          </AppLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/passenger/scheduled">
+        <ProtectedRoute allowedRoles={["passenger", "admin"]}>
+          <AppLayout>
+            <PassengerScheduled />
           </AppLayout>
         </ProtectedRoute>
       </Route>
@@ -81,6 +92,13 @@ function Router() {
         <ProtectedRoute allowedRoles={["driver", "admin"]}>
           <AppLayout>
             <DriverHistory />
+          </AppLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/driver/scheduled">
+        <ProtectedRoute allowedRoles={["driver", "admin"]}>
+          <AppLayout>
+            <DriverScheduled />
           </AppLayout>
         </ProtectedRoute>
       </Route>
@@ -144,6 +162,13 @@ function Router() {
         <ProtectedRoute allowedRoles={["admin"]}>
           <AppLayout>
             <AdminUsers />
+          </AppLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/scheduled">
+        <ProtectedRoute allowedRoles={["admin"]}>
+          <AppLayout>
+            <AdminScheduled />
           </AppLayout>
         </ProtectedRoute>
       </Route>

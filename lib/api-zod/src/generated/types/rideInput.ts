@@ -5,6 +5,7 @@
  * UPcar - ride sharing API
  * OpenAPI spec version: 0.1.0
  */
+import type { RideInputSchedulingType } from './rideInputSchedulingType';
 
 export interface RideInput {
   originAddress: string;
@@ -18,4 +19,13 @@ export interface RideInput {
   estimatedDistance?: number | null;
   /** @nullable */
   estimatedDuration?: number | null;
+  isScheduled?: boolean;
+  /** @nullable */
+  scheduledFor?: Date | null;
+  /** @nullable */
+  schedulingType?: RideInputSchedulingType;
+  /** @nullable */
+  directedToDriverId?: number | null;
+  /** @nullable */
+  scheduledNote?: string | null;
 }

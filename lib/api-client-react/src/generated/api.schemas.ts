@@ -198,6 +198,30 @@ export const RideStatus = {
   cancelled: 'cancelled',
 } as const;
 
+/**
+ * @nullable
+ */
+export type RideSchedulingType = typeof RideSchedulingType[keyof typeof RideSchedulingType] | null;
+
+
+export const RideSchedulingType = {
+  public: 'public',
+  directed: 'directed',
+} as const;
+
+/**
+ * @nullable
+ */
+export type RideScheduledStatus = typeof RideScheduledStatus[keyof typeof RideScheduledStatus] | null;
+
+
+export const RideScheduledStatus = {
+  pending_acceptance: 'pending_acceptance',
+  confirmed: 'confirmed',
+  driver_declined: 'driver_declined',
+  cancelled: 'cancelled',
+} as const;
+
 export type OfferStatus = typeof OfferStatus[keyof typeof OfferStatus];
 
 
@@ -244,11 +268,33 @@ export interface Ride {
   completedAt?: string | null;
   /** @nullable */
   cancelReason?: string | null;
+  isScheduled: boolean;
+  /** @nullable */
+  scheduledFor?: string | null;
+  /** @nullable */
+  schedulingType?: RideSchedulingType;
+  /** @nullable */
+  directedToDriverId?: number | null;
+  /** @nullable */
+  scheduledStatus?: RideScheduledStatus;
+  /** @nullable */
+  scheduledNote?: string | null;
   passenger?: User;
   driver?: User;
   offers?: Offer[];
   createdAt: string;
 }
+
+/**
+ * @nullable
+ */
+export type RideInputSchedulingType = typeof RideInputSchedulingType[keyof typeof RideInputSchedulingType] | null;
+
+
+export const RideInputSchedulingType = {
+  public: 'public',
+  directed: 'directed',
+} as const;
 
 export interface RideInput {
   originAddress: string;
@@ -262,6 +308,15 @@ export interface RideInput {
   estimatedDistance?: number | null;
   /** @nullable */
   estimatedDuration?: number | null;
+  isScheduled?: boolean;
+  /** @nullable */
+  scheduledFor?: string | null;
+  /** @nullable */
+  schedulingType?: RideInputSchedulingType;
+  /** @nullable */
+  directedToDriverId?: number | null;
+  /** @nullable */
+  scheduledNote?: string | null;
 }
 
 export type RideStatusUpdateStatus = typeof RideStatusUpdateStatus[keyof typeof RideStatusUpdateStatus];
@@ -277,6 +332,11 @@ export interface RideStatusUpdate {
   status: RideStatusUpdateStatus;
   /** @nullable */
   cancelReason?: string | null;
+}
+
+export interface ScheduledRideDeclineInput {
+  /** @nullable */
+  reason?: string | null;
 }
 
 export interface OfferInput {
@@ -371,5 +431,28 @@ export const ListRidesStatus = {
   in_progress: 'in_progress',
   completed: 'completed',
   cancelled: 'cancelled',
+} as const;
+
+export type GetAdminScheduledRidesParams = {
+scheduledStatus?: GetAdminScheduledRidesScheduledStatus;
+schedulingType?: GetAdminScheduledRidesSchedulingType;
+};
+
+export type GetAdminScheduledRidesScheduledStatus = typeof GetAdminScheduledRidesScheduledStatus[keyof typeof GetAdminScheduledRidesScheduledStatus];
+
+
+export const GetAdminScheduledRidesScheduledStatus = {
+  pending_acceptance: 'pending_acceptance',
+  confirmed: 'confirmed',
+  driver_declined: 'driver_declined',
+  cancelled: 'cancelled',
+} as const;
+
+export type GetAdminScheduledRidesSchedulingType = typeof GetAdminScheduledRidesSchedulingType[keyof typeof GetAdminScheduledRidesSchedulingType];
+
+
+export const GetAdminScheduledRidesSchedulingType = {
+  public: 'public',
+  directed: 'directed',
 } as const;
 

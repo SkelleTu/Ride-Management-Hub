@@ -7,7 +7,7 @@ import { getListRidesQueryKey } from "@workspace/api-client-react";
 import MapView from "@/components/map/MapView";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronRight, Navigation, Loader2, Route, Hash, LocateFixed } from "lucide-react";
+import { ChevronRight, Navigation, Loader2, Route, Hash, LocateFixed, Calendar, Clock, Radio, User2, FileText, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const PRICE_PER_KM = 2;
@@ -18,8 +18,16 @@ interface LocationPoint {
   lng: number;
 }
 
+interface DriverOption {
+  id: number;
+  name: string;
+  vehicleModel: string | null;
+  vehiclePlate: string | null;
+}
+
 async function fetchRoute(origin: LocationPoint, destination: LocationPoint): Promise<{
   distanceKm: number;
+  durationSeconds: number;
   routePoints: [number, number][];
 } | null> {
   try {
@@ -32,10 +40,11 @@ async function fetchRoute(origin: LocationPoint, destination: LocationPoint): Pr
     if (data.code !== "Ok" || !data.routes?.[0]) return null;
     const route = data.routes[0];
     const distanceKm = route.distance / 1000;
+    const durationSeconds = route.duration;
     const routePoints: [number, number][] = route.geometry.coordinates.map(
       ([lng, lat]: [number, number]) => [lat, lng]
     );
-    return { distanceKm, routePoints };
+    return { distanceKm, durationSeconds, routePoints };
   } catch {
     return null;
   }
@@ -44,6 +53,13 @@ async function fetchRoute(origin: LocationPoint, destination: LocationPoint): Pr
 function buildFinalAddress(base: string, number: string) {
   if (!number.trim()) return base;
   return `${base}, nº ${number.trim()}`;
+}
+
+function getMinDatetimeLocal() {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() + 30);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
 }
 
 export default function PassengerHome() {
@@ -62,12 +78,25 @@ export default function PassengerHome() {
   const [originSuggestions, setOriginSuggestions] = useState<any[]>([]);
   const [destSuggestions, setDestSuggestions] = useState<any[]>([]);
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
+  const [durationSeconds, setDurationSeconds] = useState<number | null>(null);
   const [routePoints, setRoutePoints] = useState<[number, number][]>([]);
   const [isCalculating, setIsCalculating] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // On mount: redirect to active ride if passenger already has one in progress
+  // ── Scheduling state ───────────────────────────────────────────────────
+  const [isScheduling, setIsScheduling] = useState(false);
+  const [scheduledFor, setScheduledFor] = useState("");
+  const [schedulingType, setSchedulingType] = useState<"public" | "directed">("public");
+  const [directedToDriverId, setDirectedToDriverId] = useState<number | null>(null);
+  const [driverSearch, setDriverSearch] = useState("");
+  const [driverOptions, setDriverOptions] = useState<DriverOption[]>([]);
+  const [selectedDriver, setSelectedDriver] = useState<DriverOption | null>(null);
+  const [driverSearchLoading, setDriverSearchLoading] = useState(false);
+  const [scheduledNote, setScheduledNote] = useState("");
+  const driverDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // On mount: redirect to active NON-SCHEDULED ride if passenger already has one
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -75,7 +104,9 @@ export default function PassengerHome() {
       .then(r => r.ok ? r.json() : [])
       .then((rides: any[]) => {
         const activeStatuses = ["open", "negotiating", "accepted", "in_progress"];
-        const active = rides.find(r => activeStatuses.includes(r.status));
+        const active = rides.find(r =>
+          activeStatuses.includes(r.status) && !r.isScheduled
+        );
         if (active) setLocation(`/passenger/ride/${active.id}`);
       })
       .catch(() => {});
@@ -87,16 +118,12 @@ export default function PassengerHome() {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
-        // Plot marker and center map immediately with raw coordinates
         const coordLabel = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
         setOrigin({ address: coordLabel, lat, lng });
         setOriginQuery(coordLabel);
         setIsLocating(false);
-        // Then try to resolve actual street address in the background
         try {
-          const r = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
-          );
+          const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
           if (r.ok) {
             const data = await r.json();
             if (data?.display_name) {
@@ -105,9 +132,7 @@ export default function PassengerHome() {
               setOriginQuery(shortName);
             }
           }
-        } catch {
-          // keep coordinates as address fallback
-        }
+        } catch {}
       },
       () => setIsLocating(false),
       { enableHighAccuracy: true, timeout: 10000 }
@@ -119,16 +144,17 @@ export default function PassengerHome() {
   useEffect(() => {
     if (!origin || !destination) {
       setDistanceKm(null);
+      setDurationSeconds(null);
       setRoutePoints([]);
       setOfferedPrice("");
       return;
     }
-
     setIsCalculating(true);
     fetchRoute(origin, destination).then((result) => {
       setIsCalculating(false);
       if (result) {
         setDistanceKm(result.distanceKm);
+        setDurationSeconds(result.durationSeconds);
         setRoutePoints(result.routePoints);
         setOfferedPrice((result.distanceKm * PRICE_PER_KM).toFixed(2));
       }
@@ -153,6 +179,42 @@ export default function PassengerHome() {
         }
       } catch {}
     }, 800);
+  };
+
+  const searchDrivers = (query: string) => {
+    if (driverDebounceRef.current) clearTimeout(driverDebounceRef.current);
+    if (query.length < 2) {
+      setDriverOptions([]);
+      return;
+    }
+    driverDebounceRef.current = setTimeout(async () => {
+      setDriverSearchLoading(true);
+      try {
+        const token = localStorage.getItem("token");
+        const r = await fetch(`/api/drivers?status=approved`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!r.ok) return;
+        const drivers: any[] = await r.json();
+        const q = query.toLowerCase();
+        const filtered = drivers
+          .filter(d =>
+            d.user?.name?.toLowerCase().includes(q) ||
+            d.vehicleModel?.toLowerCase().includes(q) ||
+            d.vehiclePlate?.toLowerCase().includes(q)
+          )
+          .slice(0, 8)
+          .map(d => ({
+            id: d.userId,
+            name: d.user?.name ?? `Motorista #${d.userId}`,
+            vehicleModel: d.vehicleModel ?? null,
+            vehiclePlate: d.vehiclePlate ?? null,
+          }));
+        setDriverOptions(filtered);
+      } catch {} finally {
+        setDriverSearchLoading(false);
+      }
+    }, 400);
   };
 
   const selectAddress = (item: any, type: "origin" | "dest") => {
@@ -201,28 +263,68 @@ export default function PassengerHome() {
       toast({ title: "Valor inválido", variant: "destructive" });
       return;
     }
-    createRide.mutate({
-      data: {
-        originAddress: buildFinalAddress(origin.address, originNumber),
-        originLat: origin.lat,
-        originLng: origin.lng,
-        destinationAddress: buildFinalAddress(destination.address, destNumber),
-        destinationLat: destination.lat,
-        destinationLng: destination.lng,
-        offeredPrice: price,
+
+    // Scheduling validation
+    if (isScheduling) {
+      if (!scheduledFor) {
+        toast({ title: "Informe data e horário do agendamento", variant: "destructive" });
+        return;
       }
-    }, {
+      const schedDate = new Date(scheduledFor);
+      if (schedDate <= new Date()) {
+        toast({ title: "A data do agendamento deve ser futura", variant: "destructive" });
+        return;
+      }
+      if (schedulingType === "directed" && !directedToDriverId) {
+        toast({ title: "Selecione um motorista para a corrida direcionada", variant: "destructive" });
+        return;
+      }
+    }
+
+    const rideData: any = {
+      originAddress: buildFinalAddress(origin.address, originNumber),
+      originLat: origin.lat,
+      originLng: origin.lng,
+      destinationAddress: buildFinalAddress(destination.address, destNumber),
+      destinationLat: destination.lat,
+      destinationLng: destination.lng,
+      offeredPrice: price,
+      estimatedDistance: distanceKm ?? undefined,
+      estimatedDuration: durationSeconds ? Math.round(durationSeconds) : undefined,
+    };
+
+    if (isScheduling) {
+      rideData.isScheduled = true;
+      rideData.scheduledFor = new Date(scheduledFor).toISOString();
+      rideData.schedulingType = schedulingType;
+      if (schedulingType === "directed" && directedToDriverId) {
+        rideData.directedToDriverId = directedToDriverId;
+      }
+      if (scheduledNote.trim()) rideData.scheduledNote = scheduledNote.trim();
+    }
+
+    createRide.mutate({ data: rideData }, {
       onSuccess: (ride) => {
         queryClient.invalidateQueries({ queryKey: getListRidesQueryKey() });
-        setLocation(`/passenger/ride/${ride.id}`);
+        if (isScheduling) {
+          toast({
+            title: "Corrida agendada com sucesso!",
+            description: `Agendada para ${new Date(scheduledFor).toLocaleString("pt-BR")}. Aguarde confirmação do motorista.`,
+          });
+          setLocation(`/passenger/scheduled`);
+        } else {
+          setLocation(`/passenger/ride/${ride.id}`);
+        }
       },
-      onError: () => toast({ title: "Erro ao solicitar corrida", variant: "destructive" }),
+      onError: (err: any) => {
+        const msg = err?.response?.data?.error ?? "Erro ao solicitar corrida";
+        toast({ title: msg, variant: "destructive" });
+      },
     });
   };
 
   return (
     <>
-      {/* Map: fixed to viewport, completely free from flex/overflow constraints */}
       <div className="fixed inset-x-0 top-16 bottom-0 z-0">
         <MapView
           origin={origin}
@@ -235,166 +337,341 @@ export default function PassengerHome() {
         />
       </div>
 
-      {/* Bottom sheet: fixed on top of map */}
-      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border rounded-t-2xl shadow-2xl p-4 space-y-3 z-[1000]">
-        <div className="w-10 h-1 bg-muted rounded-full mx-auto" />
-        <div className="text-sm text-muted-foreground font-medium">
-          Olá, {user?.name?.split(" ")[0]}! Para onde vamos?
-        </div>
+      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border rounded-t-2xl shadow-2xl p-4 z-[1000]">
+        <div className="max-h-[80vh] overflow-y-auto space-y-3 pb-1">
+          <div className="w-10 h-1 bg-muted rounded-full mx-auto" />
 
-        {/* Origin */}
-        <div className="space-y-1.5">
-          <div className="relative">
-            <div className={`flex items-center gap-2 bg-secondary rounded-xl px-3 py-2.5 border transition-colors ${isLocating ? "border-primary/50" : "border-border focus-within:border-primary"}`}>
-              {isLocating ? (
-                <LocateFixed className="w-3.5 h-3.5 text-primary shrink-0 animate-pulse" />
-              ) : (
-                <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
-              )}
-              <Input
-                data-testid="input-origin"
-                placeholder={isLocating ? "Detectando sua localização..." : "De onde?"}
-                value={originQuery}
-                disabled={isLocating}
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck={false}
-                onChange={(e) => {
-                  setOriginQuery(e.target.value);
-                  setOrigin(null);
-                  searchAddress(e.target.value, "origin");
-                }}
-                className="border-none bg-transparent p-0 h-auto text-sm focus-visible:ring-0 disabled:opacity-60 disabled:cursor-wait"
-              />
-              {isLocating && (
-                <Loader2 className="w-3.5 h-3.5 text-primary shrink-0 animate-spin" />
-              )}
+          {/* Mode toggle: Agora / Agendar */}
+          <div className="flex items-center gap-2">
+            <div className="flex bg-secondary rounded-xl p-1 gap-1 flex-1">
+              <button
+                onClick={() => setIsScheduling(false)}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                  !isScheduling
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Navigation className="w-3.5 h-3.5" />
+                Agora
+              </button>
+              <button
+                onClick={() => setIsScheduling(true)}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                  isScheduling
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                Agendar
+              </button>
             </div>
-            {originSuggestions.length > 0 && (
-              <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
-                {originSuggestions.map((s) => (
-                  <button key={`${s.lat}-${s.lon}`} onMouseDown={(e) => { e.preventDefault(); selectAddress(s, "origin"); }}
-                    className="w-full text-left px-3 py-2.5 text-sm hover:bg-secondary transition-colors border-b border-border last:border-0">
-                    <div className="font-medium truncate">{s.display_name.split(",")[0]}</div>
-                    <div className="text-xs text-muted-foreground truncate">
-                      {s.display_name.split(",").slice(1, 3).join(",")}
-                      {s.postcode ? ` · CEP ${s.postcode}` : ""}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
-          {/* Number field for origin */}
-          <div className="flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2 border border-border/60 focus-within:border-primary/60 transition-colors">
-            <Hash className="w-3 h-3 text-muted-foreground shrink-0" />
-            <Input
-              data-testid="input-origin-number"
-              placeholder="Número / complemento (ex: 123, Apto 4)"
-              value={originNumber}
-              onChange={(e) => setOriginNumber(e.target.value)}
-              className="border-none bg-transparent p-0 h-auto text-xs focus-visible:ring-0"
-            />
-          </div>
-        </div>
 
-        {/* Destination */}
-        <div className="space-y-1.5">
-          <div className="relative">
-            <div className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2.5 border border-border focus-within:border-accent transition-colors">
-              <Navigation className="w-3 h-3 text-accent shrink-0" />
-              <Input
-                data-testid="input-destination"
-                placeholder="Para onde?"
-                value={destQuery}
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck={false}
-                onChange={(e) => {
-                  setDestQuery(e.target.value);
-                  setDestination(null);
-                  searchAddress(e.target.value, "dest");
-                }}
-                className="border-none bg-transparent p-0 h-auto text-sm focus-visible:ring-0"
-              />
-            </div>
-            {destSuggestions.length > 0 && (
-              <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
-                {destSuggestions.map((s) => (
-                  <button key={`${s.lat}-${s.lon}`} onMouseDown={(e) => { e.preventDefault(); selectAddress(s, "dest"); }}
-                    className="w-full text-left px-3 py-2.5 text-sm hover:bg-secondary transition-colors border-b border-border last:border-0">
-                    <div className="font-medium truncate">{s.display_name.split(",")[0]}</div>
-                    <div className="text-xs text-muted-foreground truncate">
-                      {s.display_name.split(",").slice(1, 3).join(",")}
-                      {s.postcode ? ` · CEP ${s.postcode}` : ""}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="text-sm text-muted-foreground font-medium">
+            {isScheduling
+              ? "Agende sua corrida com antecedência"
+              : `Olá, ${user?.name?.split(" ")[0]}! Para onde vamos?`}
           </div>
-          {/* Number field for destination */}
-          <div className="flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2 border border-border/60 focus-within:border-accent/60 transition-colors">
-            <Hash className="w-3 h-3 text-muted-foreground shrink-0" />
-            <Input
-              data-testid="input-dest-number"
-              placeholder="Número / complemento (ex: 456, Bloco B)"
-              value={destNumber}
-              onChange={(e) => setDestNumber(e.target.value)}
-              className="border-none bg-transparent p-0 h-auto text-xs focus-visible:ring-0"
-            />
-          </div>
-        </div>
 
-        {/* Price estimate card */}
-        {(isCalculating || distanceKm !== null) && (
-          <div className="flex items-center gap-3 bg-primary/10 border border-primary/20 rounded-xl px-3 py-2.5">
-            {isCalculating ? (
-              <>
-                <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
-                <span className="text-sm text-muted-foreground">Calculando rota e preço...</span>
-              </>
-            ) : (
-              <>
-                <Route className="w-4 h-4 text-primary shrink-0" />
-                <div className="flex-1 text-sm">
-                  <span className="text-muted-foreground">{distanceKm?.toFixed(1)} km</span>
-                  <span className="mx-2 text-muted-foreground">·</span>
-                  <span className="text-xs text-muted-foreground">R$ {PRICE_PER_KM},00/km</span>
+          {/* Origin */}
+          <div className="space-y-1.5">
+            <div className="relative">
+              <div className={`flex items-center gap-2 bg-secondary rounded-xl px-3 py-2.5 border transition-colors ${isLocating ? "border-primary/50" : "border-border focus-within:border-primary"}`}>
+                {isLocating ? (
+                  <LocateFixed className="w-3.5 h-3.5 text-primary shrink-0 animate-pulse" />
+                ) : (
+                  <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                )}
+                <Input
+                  data-testid="input-origin"
+                  placeholder={isLocating ? "Detectando sua localização..." : "De onde?"}
+                  value={originQuery}
+                  disabled={isLocating}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  onChange={(e) => {
+                    setOriginQuery(e.target.value);
+                    setOrigin(null);
+                    searchAddress(e.target.value, "origin");
+                  }}
+                  className="border-none bg-transparent p-0 h-auto text-sm focus-visible:ring-0 disabled:opacity-60 disabled:cursor-wait"
+                />
+                {isLocating && <Loader2 className="w-3.5 h-3.5 text-primary shrink-0 animate-spin" />}
+              </div>
+              {originSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
+                  {originSuggestions.map((s) => (
+                    <button key={`${s.lat}-${s.lon}`} onMouseDown={(e) => { e.preventDefault(); selectAddress(s, "origin"); }}
+                      className="w-full text-left px-3 py-2.5 text-sm hover:bg-secondary transition-colors border-b border-border last:border-0">
+                      <div className="font-medium truncate">{s.display_name.split(",")[0]}</div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {s.display_name.split(",").slice(1, 3).join(",")}
+                        {s.postcode ? ` · CEP ${s.postcode}` : ""}
+                      </div>
+                    </button>
+                  ))}
                 </div>
-                <span className="text-primary font-bold text-base">R$ {offeredPrice}</span>
-              </>
-            )}
+              )}
+            </div>
+            <div className="flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2 border border-border/60 focus-within:border-primary/60 transition-colors">
+              <Hash className="w-3 h-3 text-muted-foreground shrink-0" />
+              <Input
+                data-testid="input-origin-number"
+                placeholder="Número / complemento (ex: 123, Apto 4)"
+                value={originNumber}
+                onChange={(e) => setOriginNumber(e.target.value)}
+                className="border-none bg-transparent p-0 h-auto text-xs focus-visible:ring-0"
+              />
+            </div>
           </div>
-        )}
 
-        {/* Price field (editable) */}
-        <div className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2.5 border border-border focus-within:border-primary transition-colors">
-          <span className="text-primary font-semibold text-sm shrink-0">R$</span>
-          <Input
-            data-testid="input-price"
-            type="number"
-            placeholder={distanceKm ? "Preço calculado automaticamente" : "Sua oferta de preço"}
-            value={offeredPrice}
-            onChange={(e) => setOfferedPrice(e.target.value)}
-            className="border-none bg-transparent p-0 h-auto text-sm focus-visible:ring-0"
-          />
-        </div>
+          {/* Destination */}
+          <div className="space-y-1.5">
+            <div className="relative">
+              <div className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2.5 border border-border focus-within:border-accent transition-colors">
+                <Navigation className="w-3 h-3 text-accent shrink-0" />
+                <Input
+                  data-testid="input-destination"
+                  placeholder="Para onde?"
+                  value={destQuery}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  onChange={(e) => {
+                    setDestQuery(e.target.value);
+                    setDestination(null);
+                    searchAddress(e.target.value, "dest");
+                  }}
+                  className="border-none bg-transparent p-0 h-auto text-sm focus-visible:ring-0"
+                />
+              </div>
+              {destSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
+                  {destSuggestions.map((s) => (
+                    <button key={`${s.lat}-${s.lon}`} onMouseDown={(e) => { e.preventDefault(); selectAddress(s, "dest"); }}
+                      className="w-full text-left px-3 py-2.5 text-sm hover:bg-secondary transition-colors border-b border-border last:border-0">
+                      <div className="font-medium truncate">{s.display_name.split(",")[0]}</div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {s.display_name.split(",").slice(1, 3).join(",")}
+                        {s.postcode ? ` · CEP ${s.postcode}` : ""}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2 border border-border/60 focus-within:border-accent/60 transition-colors">
+              <Hash className="w-3 h-3 text-muted-foreground shrink-0" />
+              <Input
+                data-testid="input-dest-number"
+                placeholder="Número / complemento (ex: 456, Bloco B)"
+                value={destNumber}
+                onChange={(e) => setDestNumber(e.target.value)}
+                className="border-none bg-transparent p-0 h-auto text-xs focus-visible:ring-0"
+              />
+            </div>
+          </div>
 
-        <Button
-          data-testid="button-request-ride"
-          onClick={handleSubmit}
-          disabled={!origin || !destination || !offeredPrice || createRide.isPending || isCalculating}
-          className="w-full h-12 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl"
-        >
-          {createRide.isPending ? "Solicitando..." : "Solicitar Corrida"}
-          {!createRide.isPending && <ChevronRight className="ml-1 w-4 h-4" />}
-        </Button>
+          {/* ── Scheduling Panel ──────────────────────────────────────────── */}
+          {isScheduling && (
+            <div className="space-y-3 border border-primary/20 bg-primary/5 rounded-xl p-3">
+              {/* Date/time */}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                  <Clock className="w-3 h-3" /> Data e Horário
+                </label>
+                <div className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2.5 border border-border focus-within:border-primary transition-colors">
+                  <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <input
+                    type="datetime-local"
+                    value={scheduledFor}
+                    min={getMinDatetimeLocal()}
+                    onChange={(e) => setScheduledFor(e.target.value)}
+                    className="flex-1 bg-transparent text-sm outline-none text-foreground [color-scheme:dark]"
+                  />
+                </div>
+              </div>
 
-        <div className="text-xs text-center text-muted-foreground">
-          Toque no mapa para marcar os pontos · preço pode ser ajustado
+              {/* Scheduling type */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                  <Radio className="w-3 h-3" /> Tipo de Agendamento
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setSchedulingType("public"); setSelectedDriver(null); setDirectedToDriverId(null); setDriverSearch(""); }}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium border transition-all ${
+                      schedulingType === "public"
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground hover:border-primary/50"
+                    }`}
+                  >
+                    <Globe className="w-3.5 h-3.5" />
+                    Pública
+                  </button>
+                  <button
+                    onClick={() => setSchedulingType("directed")}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium border transition-all ${
+                      schedulingType === "directed"
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground hover:border-primary/50"
+                    }`}
+                  >
+                    <User2 className="w-3.5 h-3.5" />
+                    Direcionada
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {schedulingType === "public"
+                    ? "Qualquer motorista aprovado pode aceitar"
+                    : "Escolha um motorista específico para a corrida"}
+                </p>
+              </div>
+
+              {/* Driver search (directed only) */}
+              {schedulingType === "directed" && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                    <User2 className="w-3 h-3" /> Motorista
+                  </label>
+                  {selectedDriver ? (
+                    <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-xl px-3 py-2.5">
+                      <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                        <User2 className="w-3.5 h-3.5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{selectedDriver.name}</div>
+                        {selectedDriver.vehicleModel && (
+                          <div className="text-xs text-muted-foreground truncate">
+                            {selectedDriver.vehicleModel} {selectedDriver.vehiclePlate ? `· ${selectedDriver.vehiclePlate}` : ""}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => { setSelectedDriver(null); setDirectedToDriverId(null); setDriverSearch(""); setDriverOptions([]); }}
+                        className="text-xs text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                      >
+                        Trocar
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <div className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2.5 border border-border focus-within:border-primary transition-colors">
+                        <User2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                        <Input
+                          placeholder="Buscar motorista por nome ou placa..."
+                          value={driverSearch}
+                          onChange={(e) => {
+                            setDriverSearch(e.target.value);
+                            searchDrivers(e.target.value);
+                          }}
+                          className="border-none bg-transparent p-0 h-auto text-sm focus-visible:ring-0"
+                        />
+                        {driverSearchLoading && <Loader2 className="w-3.5 h-3.5 text-muted-foreground shrink-0 animate-spin" />}
+                      </div>
+                      {driverOptions.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
+                          {driverOptions.map((d) => (
+                            <button
+                              key={d.id}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                setSelectedDriver(d);
+                                setDirectedToDriverId(d.id);
+                                setDriverSearch(d.name);
+                                setDriverOptions([]);
+                              }}
+                              className="w-full text-left px-3 py-2.5 text-sm hover:bg-secondary transition-colors border-b border-border last:border-0"
+                            >
+                              <div className="font-medium">{d.name}</div>
+                              {d.vehicleModel && (
+                                <div className="text-xs text-muted-foreground">
+                                  {d.vehicleModel} {d.vehiclePlate ? `· ${d.vehiclePlate}` : ""}
+                                </div>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Optional note */}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                  <FileText className="w-3 h-3" /> Observação (opcional)
+                </label>
+                <div className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2.5 border border-border focus-within:border-primary transition-colors">
+                  <Input
+                    placeholder="Ex: Voo às 14h, bagagem grande..."
+                    value={scheduledNote}
+                    onChange={(e) => setScheduledNote(e.target.value)}
+                    className="border-none bg-transparent p-0 h-auto text-sm focus-visible:ring-0"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Price estimate card */}
+          {(isCalculating || distanceKm !== null) && (
+            <div className="flex items-center gap-3 bg-primary/10 border border-primary/20 rounded-xl px-3 py-2.5">
+              {isCalculating ? (
+                <>
+                  <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
+                  <span className="text-sm text-muted-foreground">Calculando rota e preço...</span>
+                </>
+              ) : (
+                <>
+                  <Route className="w-4 h-4 text-primary shrink-0" />
+                  <div className="flex-1 text-sm">
+                    <span className="text-muted-foreground">{distanceKm?.toFixed(1)} km</span>
+                    <span className="mx-2 text-muted-foreground">·</span>
+                    <span className="text-xs text-muted-foreground">R$ {PRICE_PER_KM},00/km</span>
+                  </div>
+                  <span className="text-primary font-bold text-base">R$ {offeredPrice}</span>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Price field */}
+          <div className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2.5 border border-border focus-within:border-primary transition-colors">
+            <span className="text-primary font-semibold text-sm shrink-0">R$</span>
+            <Input
+              data-testid="input-price"
+              type="number"
+              placeholder={distanceKm ? "Preço calculado automaticamente" : "Sua oferta de preço"}
+              value={offeredPrice}
+              onChange={(e) => setOfferedPrice(e.target.value)}
+              className="border-none bg-transparent p-0 h-auto text-sm focus-visible:ring-0"
+            />
+          </div>
+
+          <Button
+            data-testid="button-request-ride"
+            onClick={handleSubmit}
+            disabled={!origin || !destination || !offeredPrice || createRide.isPending || isCalculating}
+            className="w-full h-12 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl"
+          >
+            {createRide.isPending
+              ? (isScheduling ? "Agendando..." : "Solicitando...")
+              : (isScheduling ? "Agendar Corrida" : "Solicitar Corrida")}
+            {!createRide.isPending && <ChevronRight className="ml-1 w-4 h-4" />}
+          </Button>
+
+          <div className="text-xs text-center text-muted-foreground">
+            {isScheduling
+              ? "Toque no mapa para marcar pontos · aguarde confirmação do motorista"
+              : "Toque no mapa para marcar os pontos · preço pode ser ajustado"}
+          </div>
         </div>
       </div>
     </>

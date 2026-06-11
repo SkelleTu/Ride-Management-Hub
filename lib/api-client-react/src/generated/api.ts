@@ -27,6 +27,7 @@ import type {
   DriverProfile,
   DriverProfileInput,
   ErrorResponse,
+  GetAdminScheduledRidesParams,
   HealthStatus,
   ListDriversParams,
   ListRidesParams,
@@ -38,6 +39,7 @@ import type {
   Ride,
   RideInput,
   RideStatusUpdate,
+  ScheduledRideDeclineInput,
   User,
   UserUpdate
 } from './api.schemas';
@@ -1331,6 +1333,83 @@ export function useGetActiveRides<TData = Awaited<ReturnType<typeof getActiveRid
 
 
 
+export const getGetScheduledRidesUrl = () => {
+
+
+
+
+  return `/api/rides/scheduled`
+}
+
+/**
+ * @summary Get scheduled rides visible to current driver (public + directed)
+ */
+export const getScheduledRides = async ( options?: RequestInit): Promise<Ride[]> => {
+
+  return customFetch<Ride[]>(getGetScheduledRidesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetScheduledRidesQueryKey = () => {
+    return [
+    `/api/rides/scheduled`
+    ] as const;
+    }
+
+
+export const getGetScheduledRidesQueryOptions = <TData = Awaited<ReturnType<typeof getScheduledRides>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getScheduledRides>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetScheduledRidesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getScheduledRides>>> = ({ signal }) => getScheduledRides({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getScheduledRides>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetScheduledRidesQueryResult = NonNullable<Awaited<ReturnType<typeof getScheduledRides>>>
+export type GetScheduledRidesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get scheduled rides visible to current driver (public + directed)
+ */
+
+export function useGetScheduledRides<TData = Awaited<ReturnType<typeof getScheduledRides>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getScheduledRides>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetScheduledRidesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getGetRideUrl = (id: number,) => {
 
 
@@ -1548,6 +1627,148 @@ export const useCancelRide = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCancelRideMutationOptions(options));
+    }
+
+export const getAcceptScheduledRideUrl = (id: number,) => {
+
+
+
+
+  return `/api/rides/${id}/accept-scheduled`
+}
+
+/**
+ * @summary Driver accepts a scheduled ride
+ */
+export const acceptScheduledRide = async (id: number, options?: RequestInit): Promise<Ride> => {
+
+  return customFetch<Ride>(getAcceptScheduledRideUrl(id),
+  {
+    ...options,
+    method: 'PATCH'
+
+
+  }
+);}
+
+
+
+
+export const getAcceptScheduledRideMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acceptScheduledRide>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof acceptScheduledRide>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['acceptScheduledRide'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof acceptScheduledRide>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  acceptScheduledRide(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AcceptScheduledRideMutationResult = NonNullable<Awaited<ReturnType<typeof acceptScheduledRide>>>
+
+    export type AcceptScheduledRideMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Driver accepts a scheduled ride
+ */
+export const useAcceptScheduledRide = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acceptScheduledRide>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof acceptScheduledRide>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAcceptScheduledRideMutationOptions(options));
+    }
+
+export const getDeclineScheduledRideUrl = (id: number,) => {
+
+
+
+
+  return `/api/rides/${id}/decline-scheduled`
+}
+
+/**
+ * @summary Driver declines a scheduled ride
+ */
+export const declineScheduledRide = async (id: number,
+    scheduledRideDeclineInput?: ScheduledRideDeclineInput, options?: RequestInit): Promise<Ride> => {
+
+  return customFetch<Ride>(getDeclineScheduledRideUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      scheduledRideDeclineInput,)
+  }
+);}
+
+
+
+
+export const getDeclineScheduledRideMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof declineScheduledRide>>, TError,{id: number;data?: BodyType<ScheduledRideDeclineInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof declineScheduledRide>>, TError,{id: number;data?: BodyType<ScheduledRideDeclineInput>}, TContext> => {
+
+const mutationKey = ['declineScheduledRide'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof declineScheduledRide>>, {id: number;data?: BodyType<ScheduledRideDeclineInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  declineScheduledRide(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeclineScheduledRideMutationResult = NonNullable<Awaited<ReturnType<typeof declineScheduledRide>>>
+    export type DeclineScheduledRideMutationBody = BodyType<ScheduledRideDeclineInput> | undefined
+    export type DeclineScheduledRideMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Driver declines a scheduled ride
+ */
+export const useDeclineScheduledRide = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof declineScheduledRide>>, TError,{id: number;data?: BodyType<ScheduledRideDeclineInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof declineScheduledRide>>,
+        TError,
+        {id: number;data?: BodyType<ScheduledRideDeclineInput>},
+        TContext
+      > => {
+      return useMutation(getDeclineScheduledRideMutationOptions(options));
     }
 
 export const getListOffersUrl = (rideId: number,) => {
@@ -1985,6 +2206,90 @@ export function useGetRecentActivity<TData = Awaited<ReturnType<typeof getRecent
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetRecentActivityQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetAdminScheduledRidesUrl = (params?: GetAdminScheduledRidesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/scheduled-rides?${stringifiedParams}` : `/api/admin/scheduled-rides`
+}
+
+/**
+ * @summary All scheduled rides (admin)
+ */
+export const getAdminScheduledRides = async (params?: GetAdminScheduledRidesParams, options?: RequestInit): Promise<Ride[]> => {
+
+  return customFetch<Ride[]>(getGetAdminScheduledRidesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminScheduledRidesQueryKey = (params?: GetAdminScheduledRidesParams,) => {
+    return [
+    `/api/admin/scheduled-rides`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetAdminScheduledRidesQueryOptions = <TData = Awaited<ReturnType<typeof getAdminScheduledRides>>, TError = ErrorType<unknown>>(params?: GetAdminScheduledRidesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminScheduledRides>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminScheduledRidesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminScheduledRides>>> = ({ signal }) => getAdminScheduledRides(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminScheduledRides>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminScheduledRidesQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminScheduledRides>>>
+export type GetAdminScheduledRidesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary All scheduled rides (admin)
+ */
+
+export function useGetAdminScheduledRides<TData = Awaited<ReturnType<typeof getAdminScheduledRides>>, TError = ErrorType<unknown>>(
+ params?: GetAdminScheduledRidesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminScheduledRides>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminScheduledRidesQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -396,6 +396,21 @@ paths:
                 items:
                   $ref: "#/components/schemas/Ride"
 
+  /rides/scheduled:
+    get:
+      operationId: getScheduledRides
+      tags: [rides]
+      summary: Get scheduled rides visible to current driver (public + directed)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ride"
+
   /rides/{id}:
     get:
       operationId: getRide
@@ -457,6 +472,56 @@ paths:
           required: true
           schema:
             type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ride"
+
+  /rides/{id}/accept-scheduled:
+    patch:
+      operationId: acceptScheduledRide
+      tags: [rides]
+      summary: Driver accepts a scheduled ride
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ride"
+        "409":
+          description: Conflict - driver has overlapping ride
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /rides/{id}/decline-scheduled:
+    patch:
+      operationId: declineScheduledRide
+      tags: [rides]
+      summary: Driver declines a scheduled ride
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduledRideDeclineInput"
       responses:
         "200":
           description: OK
@@ -593,6 +658,32 @@ paths:
                 items:
                   $ref: "#/components/schemas/ActivityItem"
 
+  /admin/scheduled-rides:
+    get:
+      operationId: getAdminScheduledRides
+      tags: [admin]
+      summary: All scheduled rides (admin)
+      parameters:
+        - name: scheduledStatus
+          in: query
+          schema:
+            type: string
+            enum: [pending_acceptance, confirmed, driver_declined, cancelled]
+        - name: schedulingType
+          in: query
+          schema:
+            type: string
+            enum: [public, directed]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ride"
+
 components:
   schemas:
     HealthStatus:
@@ -697,7 +788,6 @@ components:
         status:
           type: string
           enum: [pending, approved, denied]
-        # Personal info
         cpf:
           type: ["string", "null"]
         birthDate:
@@ -708,14 +798,12 @@ components:
           type: ["string", "null"]
         state:
           type: ["string", "null"]
-        # CNH (license)
         cnhNumber:
           type: ["string", "null"]
         cnhCategory:
           type: ["string", "null"]
         cnhExpiry:
           type: ["string", "null"]
-        # Vehicle info
         vehicleMake:
           type: ["string", "null"]
         vehicleModel:
@@ -729,7 +817,6 @@ components:
         vehicleType:
           type: ["string", "null"]
           enum: [sedan, suv, hatch, pickup, moto, van, null]
-        # Documents
         photoUrl:
           type: ["string", "null"]
         cnhPhotoUrl:
@@ -738,12 +825,10 @@ components:
           type: ["string", "null"]
         criminalRecordUrl:
           type: ["string", "null"]
-        # Admin decision
         adminNote:
           type: ["string", "null"]
         reviewedAt:
           type: ["string", "null"]
-        # User info (joined)
         user:
           $ref: "#/components/schemas/User"
         createdAt:
@@ -801,7 +886,7 @@ components:
     # ── RIDE ────────────────────────────────────────────────────────────────
     Ride:
       type: object
-      required: [id, passengerId, originAddress, originLat, originLng, destinationAddress, destinationLat, destinationLng, offeredPrice, status, createdAt]
+      required: [id, passengerId, originAddress, originLat, originLng, destinationAddress, destinationLat, destinationLng, offeredPrice, status, isScheduled, createdAt]
       properties:
         id:
           type: integer
@@ -838,6 +923,21 @@ components:
           type: ["string", "null"]
         cancelReason:
           type: ["string", "null"]
+        isScheduled:
+          type: boolean
+        scheduledFor:
+          type: ["string", "null"]
+          format: date-time
+        schedulingType:
+          type: ["string", "null"]
+          enum: [public, directed, null]
+        directedToDriverId:
+          type: ["integer", "null"]
+        scheduledStatus:
+          type: ["string", "null"]
+          enum: [pending_acceptance, confirmed, driver_declined, cancelled, null]
+        scheduledNote:
+          type: ["string", "null"]
         passenger:
           $ref: "#/components/schemas/User"
         driver:
@@ -872,6 +972,18 @@ components:
           type: ["number", "null"]
         estimatedDuration:
           type: ["integer", "null"]
+        isScheduled:
+          type: boolean
+        scheduledFor:
+          type: ["string", "null"]
+          format: date-time
+        schedulingType:
+          type: ["string", "null"]
+          enum: [public, directed]
+        directedToDriverId:
+          type: ["integer", "null"]
+        scheduledNote:
+          type: ["string", "null"]
 
     RideStatusUpdate:
       type: object
@@ -881,6 +993,12 @@ components:
           type: string
           enum: [in_progress, completed, cancelled]
         cancelReason:
+          type: ["string", "null"]
+
+    ScheduledRideDeclineInput:
+      type: object
+      properties:
+        reason:
           type: ["string", "null"]
 
     # ── OFFER ───────────────────────────────────────────────────────────────

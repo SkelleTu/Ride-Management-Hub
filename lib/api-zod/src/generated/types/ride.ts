@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Offer } from './offer';
+import type { RideScheduledStatus } from './rideScheduledStatus';
+import type { RideSchedulingType } from './rideSchedulingType';
 import type { RideStatus } from './rideStatus';
 import type { User } from './user';
 
@@ -34,6 +36,17 @@ export interface Ride {
   completedAt?: string | null;
   /** @nullable */
   cancelReason?: string | null;
+  isScheduled: boolean;
+  /** @nullable */
+  scheduledFor?: Date | null;
+  /** @nullable */
+  schedulingType?: RideSchedulingType;
+  /** @nullable */
+  directedToDriverId?: number | null;
+  /** @nullable */
+  scheduledStatus?: RideScheduledStatus;
+  /** @nullable */
+  scheduledNote?: string | null;
   passenger?: User;
   driver?: User;
   offers?: Offer[];

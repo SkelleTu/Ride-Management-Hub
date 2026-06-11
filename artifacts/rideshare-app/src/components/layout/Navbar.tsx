@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { LogOut, Car, User, LayoutDashboard, Map } from "lucide-react";
+import { LogOut, Car, User, LayoutDashboard, Map, Calendar } from "lucide-react";
 import { UPcarLogo } from "@/components/ui/UPcarLogo";
 import { UserSideMenu } from "@/components/menu/UserSideMenu";
 
@@ -16,6 +16,10 @@ export function Navbar() {
         <>
           <Link href="/admin/rides" className="text-sm font-medium hover:text-primary transition-colors">
             Corridas
+          </Link>
+          <Link href="/admin/scheduled" className="flex items-center gap-1 text-sm font-medium hover:text-primary transition-colors">
+            <Calendar className="w-3.5 h-3.5" />
+            Agendamentos
           </Link>
           <Link href="/admin/drivers" className="text-sm font-medium hover:text-primary transition-colors">
             Motoristas
@@ -37,6 +41,10 @@ export function Navbar() {
           <Link href="/driver" className="text-sm font-medium hover:text-primary transition-colors">
             Solicitações
           </Link>
+          <Link href="/driver/scheduled" className="flex items-center gap-1 text-sm font-medium hover:text-primary transition-colors">
+            <Calendar className="w-3.5 h-3.5" />
+            Agendamentos
+          </Link>
           <Link href="/driver/history" className="text-sm font-medium hover:text-primary transition-colors">
             Histórico
           </Link>
@@ -52,6 +60,10 @@ export function Navbar() {
         <>
           <Link href="/passenger" className="text-sm font-medium hover:text-primary transition-colors">
             Solicitar
+          </Link>
+          <Link href="/passenger/scheduled" className="flex items-center gap-1 text-sm font-medium hover:text-primary transition-colors">
+            <Calendar className="w-3.5 h-3.5" />
+            Agendamentos
           </Link>
           <Link href="/passenger/history" className="text-sm font-medium hover:text-primary transition-colors">
             Histórico
