@@ -147,8 +147,9 @@ export default function PassengerHome() {
   };
 
   return (
-    <div className="flex-1 flex flex-col relative h-[calc(100dvh-56px)]">
-      <div className="flex-1">
+    <div className="flex-1 relative overflow-hidden">
+      {/* Map fills the entire container absolutely so Leaflet gets a concrete pixel height */}
+      <div className="absolute inset-0">
         <MapView
           origin={origin}
           destination={destination}

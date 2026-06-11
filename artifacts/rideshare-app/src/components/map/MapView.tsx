@@ -37,7 +37,7 @@ export default function MapView({ origin, destination, routePoints, onMapClick, 
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
 
-    mapInstance.current = L.map(mapRef.current).setView([-23.5505, -46.6333], 13);
+    mapInstance.current = L.map(mapRef.current, { zoomControl: true }).setView([-23.5505, -46.6333], 13);
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
@@ -50,6 +50,11 @@ export default function MapView({ origin, destination, routePoints, onMapClick, 
         onMapClick(e.latlng.lat, e.latlng.lng);
       });
     }
+
+    // Force recalculation after paint so Leaflet sees the real pixel dimensions
+    setTimeout(() => {
+      mapInstance.current?.invalidateSize();
+    }, 100);
   }, [onMapClick]);
 
   useEffect(() => {
