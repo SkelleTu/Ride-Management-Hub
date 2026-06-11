@@ -227,6 +227,8 @@ export default function DriverRide({ params }: { params: { id: string } }) {
           }
           destination={ride.status === "in_progress" ? { lat: ride.destinationLat, lng: ride.destinationLng } : null}
           driverPosition={driverPos}
+          passengerPhotoUrl={ride.passenger?.avatarUrl ?? null}
+          driverPhotoUrl={user?.avatarUrl ?? null}
           className="h-full w-full"
         />
       </div>
@@ -238,7 +240,8 @@ export default function DriverRide({ params }: { params: { id: string } }) {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <Avatar>
-                <AvatarFallback className="bg-primary/20 text-primary font-bold">{ride.passenger?.name.charAt(0)}</AvatarFallback>
+                {ride.passenger?.avatarUrl && <img src={ride.passenger.avatarUrl} alt={ride.passenger.name} className="w-full h-full object-cover rounded-full" />}
+                {!ride.passenger?.avatarUrl && <AvatarFallback className="bg-primary/20 text-primary font-bold">{ride.passenger?.name.charAt(0)}</AvatarFallback>}
               </Avatar>
               <div className="flex-1 min-w-0">
                 <div className="font-semibold">{ride.passenger?.name}</div>

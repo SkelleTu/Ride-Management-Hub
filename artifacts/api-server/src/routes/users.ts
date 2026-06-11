@@ -61,6 +61,22 @@ usersRouter.patch("/:id", requireAuth, async (req, res) => {
   res.json({ ...safeUser, driverProfile: null });
 });
 
+// Update own avatar (any authenticated user)
+usersRouter.patch("/me/avatar", requireAuth, async (req, res) => {
+  const currentUser = (req as any).user;
+  const { avatarUrl } = req.body ?? {};
+  if (!avatarUrl || typeof avatarUrl !== "string") {
+    res.status(400).json({ error: "avatarUrl required" }); return;
+  }
+  const [updated] = await db.update(usersTable)
+    .set({ avatarUrl })
+    .where(eq(usersTable.id, currentUser.id))
+    .returning();
+  if (!updated) { res.status(404).json({ error: "User not found" }); return; }
+  const { passwordHash: _, ...safe } = updated;
+  res.json({ ...safe, driverProfile: null });
+});
+
 usersRouter.delete("/:id", requireAdmin, async (req, res) => {
   const id = parseInt(String(req.params.id));
   await db.delete(usersTable).where(eq(usersTable.id, id));
