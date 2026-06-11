@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useCreateRide } from "@workspace/api-client-react";
@@ -57,6 +57,7 @@ export default function PassengerHome() {
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [routePoints, setRoutePoints] = useState<[number, number][]>([]);
   const [isCalculating, setIsCalculating] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const createRide = useCreateRide();
 
@@ -79,14 +80,24 @@ export default function PassengerHome() {
     });
   }, [origin, destination]);
 
-  const searchAddress = async (query: string, type: "origin" | "dest") => {
-    if (query.length < 3) return;
-    try {
-      const r = await fetch(`/api/proxy/geocode?q=${encodeURIComponent(query)}`);
-      const data = await r.json();
-      if (type === "origin") setOriginSuggestions(data);
-      else setDestSuggestions(data);
-    } catch {}
+  const searchAddress = (query: string, type: "origin" | "dest") => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (query.length < 3) {
+      if (type === "origin") setOriginSuggestions([]);
+      else setDestSuggestions([]);
+      return;
+    }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const r = await fetch(`/api/proxy/geocode?q=${encodeURIComponent(query)}`);
+        if (!r.ok) return;
+        const data = await r.json();
+        if (Array.isArray(data)) {
+          if (type === "origin") setOriginSuggestions(data);
+          else setDestSuggestions(data);
+        }
+      } catch {}
+    }, 800);
   };
 
   const selectAddress = (item: any, type: "origin" | "dest") => {
