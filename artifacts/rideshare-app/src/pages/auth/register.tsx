@@ -112,7 +112,7 @@ export default function Register() {
         <Button
           variant="ghost"
           className="mb-4 gap-2 text-muted-foreground"
-          onClick={() => setLocation("/auth/login")}
+          onClick={() => setLocation("/")}
         >
           <ArrowLeft className="w-4 h-4" />
           Voltar

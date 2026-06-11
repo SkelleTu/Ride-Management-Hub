@@ -36,7 +36,8 @@ export default function RoleSelection() {
     setLocation("/auth/login");
   };
 
-  const handleRegister = () => {
+  const handleRegister = (role: "passenger" | "driver") => {
+    setSelectedRole(role);
     setLocation("/auth/register");
   };
 
@@ -147,21 +148,40 @@ export default function RoleSelection() {
           </Card>
 
           <Card
-            className="group cursor-pointer hover:border-emerald-500/50 transition-colors bg-card hover-elevate overflow-hidden relative"
-            onClick={handleRegister}
+            className="group cursor-pointer hover:border-primary/50 transition-colors bg-card hover-elevate overflow-hidden relative"
+            onClick={() => handleRegister("passenger")}
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             <CardContent className="p-6 flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-foreground group-hover:text-emerald-400 transition-colors">
+                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-foreground group-hover:text-primary transition-colors">
                   <UserPlus className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg">Cadastrar</h3>
-                  <p className="text-sm text-muted-foreground">Criar uma nova conta</p>
+                  <h3 className="font-semibold text-lg">Cadastrar como Passageiro</h3>
+                  <p className="text-sm text-muted-foreground">Criar conta para solicitar corridas</p>
                 </div>
               </div>
-              <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-emerald-400 transition-colors transform group-hover:translate-x-1" />
+              <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors transform group-hover:translate-x-1" />
+            </CardContent>
+          </Card>
+
+          <Card
+            className="group cursor-pointer hover:border-accent/50 transition-colors bg-card hover-elevate overflow-hidden relative"
+            onClick={() => handleRegister("driver")}
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-accent/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <CardContent className="p-6 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-foreground group-hover:text-accent transition-colors">
+                  <UserPlus className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">Cadastrar como Motorista</h3>
+                  <p className="text-sm text-muted-foreground">Criar conta para oferecer corridas</p>
+                </div>
+              </div>
+              <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-accent transition-colors transform group-hover:translate-x-1" />
             </CardContent>
           </Card>
 
