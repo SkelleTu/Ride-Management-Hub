@@ -229,6 +229,8 @@ export default function PassengerHome() {
           destination={destination}
           routePoints={routePoints}
           onMapClick={handleMapClick}
+          passengerPhotoUrl={user?.avatarUrl ?? null}
+          passengerLabel={user?.name ? user.name.split(" ").slice(0, 2).join(" ") : "Você"}
           className="h-full w-full"
         />
       </div>
