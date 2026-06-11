@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, memo } from 'react';
 import L from 'leaflet';
 
 interface MapViewProps {
@@ -91,7 +91,7 @@ const destinationIcon = new L.Icon({
 const PERSON_PATH = `<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>`;
 const CAR_PATH = `<rect x="2" y="9" width="20" height="9" rx="2"/><path d="M16 9V7a4 4 0 0 0-8 0v2"/><circle cx="7" cy="18" r="1"/><circle cx="17" cy="18" r="1"/>`;
 
-export default function MapView({
+function MapView({
   origin, destination, driverPosition,
   passengerPhotoUrl, driverPhotoUrl,
   passengerLabel, driverLabel,
@@ -228,3 +228,5 @@ export default function MapView({
 
   return <div ref={mapRef} className={className} />;
 }
+
+export default memo(MapView);

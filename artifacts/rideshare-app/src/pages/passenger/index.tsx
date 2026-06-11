@@ -271,8 +271,8 @@ export default function PassengerHome() {
             </div>
             {originSuggestions.length > 0 && (
               <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
-                {originSuggestions.map((s, i) => (
-                  <button key={i} onMouseDown={(e) => { e.preventDefault(); selectAddress(s, "origin"); }}
+                {originSuggestions.map((s) => (
+                  <button key={`${s.lat}-${s.lon}`} onMouseDown={(e) => { e.preventDefault(); selectAddress(s, "origin"); }}
                     className="w-full text-left px-3 py-2.5 text-sm hover:bg-secondary transition-colors border-b border-border last:border-0">
                     <div className="font-medium truncate">{s.display_name.split(",")[0]}</div>
                     <div className="text-xs text-muted-foreground truncate">
@@ -320,8 +320,8 @@ export default function PassengerHome() {
             </div>
             {destSuggestions.length > 0 && (
               <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
-                {destSuggestions.map((s, i) => (
-                  <button key={i} onMouseDown={(e) => { e.preventDefault(); selectAddress(s, "dest"); }}
+                {destSuggestions.map((s) => (
+                  <button key={`${s.lat}-${s.lon}`} onMouseDown={(e) => { e.preventDefault(); selectAddress(s, "dest"); }}
                     className="w-full text-left px-3 py-2.5 text-sm hover:bg-secondary transition-colors border-b border-border last:border-0">
                     <div className="font-medium truncate">{s.display_name.split(",")[0]}</div>
                     <div className="text-xs text-muted-foreground truncate">
