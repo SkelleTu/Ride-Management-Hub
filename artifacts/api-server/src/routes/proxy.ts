@@ -2,78 +2,47 @@ import { Router } from "express";
 
 const router = Router();
 
-const STATE_TO_UF: Record<string, string> = {
-  "Acre": "AC", "Alagoas": "AL", "Amapá": "AP", "Amazonas": "AM",
-  "Bahia": "BA", "Ceará": "CE", "Espírito Santo": "ES", "Goiás": "GO",
-  "Maranhão": "MA", "Mato Grosso": "MT", "Mato Grosso do Sul": "MS",
-  "Minas Gerais": "MG", "Pará": "PA", "Paraíba": "PB", "Paraná": "PR",
-  "Pernambuco": "PE", "Piauí": "PI", "Rio de Janeiro": "RJ",
-  "Rio Grande do Norte": "RN", "Rio Grande do Sul": "RS", "Rondônia": "RO",
-  "Roraima": "RR", "Santa Catarina": "SC", "São Paulo": "SP",
-  "Sergipe": "SE", "Tocantins": "TO", "Distrito Federal": "DF",
-};
-
-async function lookupViaCEP(street: string, city: string, stateName: string): Promise<string | null> {
-  const uf = STATE_TO_UF[stateName];
-  if (!uf || !street || !city) return null;
-  try {
-    const url = `https://viacep.com.br/ws/${uf}/${encodeURIComponent(city)}/${encodeURIComponent(street)}/json/`;
-    const r = await fetch(url, {
-      headers: { "User-Agent": "UPcar/1.0" },
-      signal: AbortSignal.timeout(4000),
-    });
-    if (!r.ok) return null;
-    const data = await r.json() as any;
-    if (Array.isArray(data) && data.length > 0 && data[0].cep) return data[0].cep as string;
-    return null;
-  } catch {
-    return null;
-  }
-}
-
 router.get("/geocode", async (req, res) => {
   const { q } = req.query;
   if (!q || typeof q !== "string") return res.status(400).json({ error: "q required" });
   try {
-    const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lang=default&limit=5`;
-    const r = await fetch(url, { headers: { "User-Agent": "UPcar/1.0" } });
-    const raw = await r.json() as { features?: any[] };
-    const features = raw.features ?? [];
+    const params = new URLSearchParams({
+      q,
+      format: "json",
+      countrycodes: "BR",
+      limit: "7",
+      addressdetails: "1",
+    });
+    const url = `https://nominatim.openstreetmap.org/search?${params}`;
+    const r = await fetch(url, {
+      headers: { "User-Agent": "UPcar/1.0 (contato@upcar.com.br)" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!r.ok) return res.status(502).json({ error: "geocode failed" });
+    const raw = await r.json() as any[];
 
-    // Map Photon results then enrich Brazilian ones with ViaCEP
-    const mapped = features.map((f: any) => {
-      const p = f.properties;
-      const streetPart = p.street
-        ? (p.housenumber ? `${p.street}, ${p.housenumber}` : p.street)
+    const results = raw.map((item: any) => {
+      const addr = item.address ?? {};
+      const street = addr.road ?? addr.pedestrian ?? addr.footway ?? null;
+      const number = addr.house_number ?? null;
+      const neighbourhood = addr.suburb ?? addr.neighbourhood ?? addr.quarter ?? null;
+      const city = addr.city ?? addr.town ?? addr.village ?? addr.municipality ?? null;
+      const state = addr.state ?? null;
+      const postcode = addr.postcode
+        ? addr.postcode.replace(/\D/g, "").replace(/^(\d{5})(\d{3})$/, "$1-$2")
         : null;
-      const namePart = p.name && p.name !== p.street ? p.name : null;
-      const display_name = [namePart, streetPart, p.district, p.city, p.state]
-        .filter(Boolean).join(", ");
-      return {
-        display_name,
-        postcode: (p.postcode as string | undefined) ?? null,
-        lat: String(f.geometry.coordinates[1]),
-        lon: String(f.geometry.coordinates[0]),
-        _street: p.street as string | undefined,
-        _city: p.city as string | undefined,
-        _state: p.state as string | undefined,
-        _country: p.countrycode as string | undefined,
-      };
+
+      const parts: string[] = [];
+      if (street) parts.push(number ? `${street}, ${number}` : street);
+      if (neighbourhood) parts.push(neighbourhood);
+      if (city) parts.push(city);
+      if (state) parts.push(state);
+      const display_name = parts.length > 0 ? parts.join(", ") : item.display_name;
+
+      return { display_name, postcode, lat: item.lat, lon: item.lon };
     });
 
-    // ViaCEP enrichment — parallel, only for Brazilian results missing a postcode
-    const enriched = await Promise.all(
-      mapped.map(async (item) => {
-        if (item._country === "BR" && item._street && item._city && item._state) {
-          const viacep = await lookupViaCEP(item._street, item._city, item._state);
-          if (viacep) item.postcode = viacep;
-        }
-        const { _street, _city, _state, _country, ...clean } = item;
-        return clean;
-      })
-    );
-
-    res.json(enriched);
+    res.json(results);
   } catch (e) {
     res.status(502).json({ error: "geocode failed" });
   }
