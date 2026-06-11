@@ -11,6 +11,8 @@ interface MapViewProps {
   driverLabel?: string;
   routePoints?: [number, number][];
   onMapClick?: (lat: number, lng: number) => void;
+  onOriginDragEnd?: (lat: number, lng: number) => void;
+  onDestinationDragEnd?: (lat: number, lng: number) => void;
   className?: string;
 }
 
@@ -21,7 +23,10 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-function makePhotoIcon(photoUrl: string, borderColor: string, label?: string) {
+function makePhotoIcon(photoUrl: string, borderColor: string, label?: string, draggable?: boolean) {
+  const dragHint = draggable
+    ? `<div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10px;opacity:0.7;white-space:nowrap;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.8);">✥ arrastar</div>`
+    : '';
   const labelHtml = label
     ? `<div style="
         position:absolute;top:46px;left:50%;transform:translateX(-50%);
@@ -39,10 +44,12 @@ function makePhotoIcon(photoUrl: string, borderColor: string, label?: string) {
         border:3px solid ${borderColor};
         box-shadow:0 2px 8px rgba(0,0,0,0.5);
         background:#1a1a1a;
+        cursor:${draggable ? 'grab' : 'default'};
       ">
         <img src="${photoUrl}" style="width:100%;height:100%;object-fit:cover" />
       </div>
       ${labelHtml}
+      ${dragHint}
     </div>`,
     iconSize: [42, label ? 64 : 42],
     iconAnchor: [21, 21],
@@ -50,7 +57,10 @@ function makePhotoIcon(photoUrl: string, borderColor: string, label?: string) {
   });
 }
 
-function makeFallbackIcon(color: string, svgPath: string, label?: string) {
+function makeFallbackIcon(color: string, svgPath: string, label?: string, draggable?: boolean) {
+  const dragHint = draggable
+    ? `<div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10px;opacity:0.7;white-space:nowrap;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.8);">✥ arrastar</div>`
+    : '';
   const labelHtml = label
     ? `<div style="
         position:absolute;top:46px;left:50%;transform:translateX(-50%);
@@ -69,12 +79,14 @@ function makeFallbackIcon(color: string, svgPath: string, label?: string) {
         box-shadow:0 2px 8px rgba(0,0,0,0.5);
         background:#1a1a1a;
         display:flex;align-items:center;justify-content:center;
+        cursor:${draggable ? 'grab' : 'default'};
       ">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           ${svgPath}
         </svg>
       </div>
       ${labelHtml}
+      ${dragHint}
     </div>`,
     iconSize: [42, label ? 64 : 42],
     iconAnchor: [21, 21],
@@ -96,17 +108,24 @@ function MapView({
   passengerPhotoUrl, driverPhotoUrl,
   passengerLabel, driverLabel,
   routePoints, onMapClick,
+  onOriginDragEnd, onDestinationDragEnd,
   className = "h-full w-full"
 }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
   const markersRef = useRef<{ origin?: L.Marker; destination?: L.Marker; driver?: L.Marker }>({});
   const polylineRef = useRef<L.Polyline | null>(null);
-  // Keep onMapClick in a ref so the map init effect never needs to re-run when the callback changes
-  const onMapClickRef = useRef(onMapClick);
-  useEffect(() => { onMapClickRef.current = onMapClick; }, [onMapClick]);
+  const draggingRef = useRef<{ origin: boolean; destination: boolean }>({ origin: false, destination: false });
 
-  // Initialize map once — cleanup on unmount to avoid React/Leaflet DOM conflicts
+  // Keep callbacks in refs so effects never need to re-run when they change
+  const onMapClickRef = useRef(onMapClick);
+  const onOriginDragEndRef = useRef(onOriginDragEnd);
+  const onDestDragEndRef = useRef(onDestinationDragEnd);
+  useEffect(() => { onMapClickRef.current = onMapClick; }, [onMapClick]);
+  useEffect(() => { onOriginDragEndRef.current = onOriginDragEnd; }, [onOriginDragEnd]);
+  useEffect(() => { onDestDragEndRef.current = onDestinationDragEnd; }, [onDestinationDragEnd]);
+
+  // Initialize map once
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
 
@@ -124,7 +143,6 @@ function MapView({
     setTimeout(() => map.invalidateSize(), 100);
 
     return () => {
-      // Clean up all markers and layers before removing map
       try { Object.values(markersRef.current).forEach(m => m?.remove()); } catch {}
       markersRef.current = {};
       try { polylineRef.current?.remove(); } catch {}
@@ -144,16 +162,32 @@ function MapView({
       }
       return;
     }
+
+    const isDraggable = !!onOriginDragEndRef.current;
     const icon = passengerPhotoUrl
-      ? makePhotoIcon(passengerPhotoUrl, '#22c55e', passengerLabel)
-      : makeFallbackIcon('#22c55e', PERSON_PATH, passengerLabel);
+      ? makePhotoIcon(passengerPhotoUrl, '#22c55e', passengerLabel, isDraggable)
+      : makeFallbackIcon('#22c55e', PERSON_PATH, passengerLabel, isDraggable);
 
     if (markersRef.current.origin) {
-      markersRef.current.origin.setLatLng([origin.lat, origin.lng]);
+      // Only snap position if not currently being dragged by user
+      if (!draggingRef.current.origin) {
+        markersRef.current.origin.setLatLng([origin.lat, origin.lng]);
+      }
       markersRef.current.origin.setIcon(icon);
     } else {
-      markersRef.current.origin = L.marker([origin.lat, origin.lng], { icon })
+      const marker = L.marker([origin.lat, origin.lng], { icon, draggable: isDraggable })
         .addTo(mapInstance.current);
+
+      if (isDraggable) {
+        marker.on('dragstart', () => { draggingRef.current.origin = true; });
+        marker.on('dragend', () => {
+          draggingRef.current.origin = false;
+          const { lat, lng } = marker.getLatLng();
+          onOriginDragEndRef.current?.(lat, lng);
+        });
+      }
+
+      markersRef.current.origin = marker;
     }
   }, [origin, passengerPhotoUrl, passengerLabel]);
 
@@ -167,15 +201,33 @@ function MapView({
       }
       return;
     }
+
+    const isDraggable = !!onDestDragEndRef.current;
+
     if (markersRef.current.destination) {
-      markersRef.current.destination.setLatLng([destination.lat, destination.lng]);
+      if (!draggingRef.current.destination) {
+        markersRef.current.destination.setLatLng([destination.lat, destination.lng]);
+      }
     } else {
-      markersRef.current.destination = L.marker([destination.lat, destination.lng], { icon: destinationIcon })
-        .bindPopup('Destino').addTo(mapInstance.current);
+      const marker = L.marker([destination.lat, destination.lng], {
+        icon: destinationIcon,
+        draggable: isDraggable,
+      }).bindPopup('Destino').addTo(mapInstance.current);
+
+      if (isDraggable) {
+        marker.on('dragstart', () => { draggingRef.current.destination = true; });
+        marker.on('dragend', () => {
+          draggingRef.current.destination = false;
+          const { lat, lng } = marker.getLatLng();
+          onDestDragEndRef.current?.(lat, lng);
+        });
+      }
+
+      markersRef.current.destination = marker;
     }
   }, [destination]);
 
-  // Fit bounds
+  // Fit bounds when points change
   useEffect(() => {
     if (!mapInstance.current) return;
     const points = [origin, destination, driverPosition].filter(Boolean) as { lat: number; lng: number }[];

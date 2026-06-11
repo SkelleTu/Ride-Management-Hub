@@ -7,10 +7,59 @@ import { getListRidesQueryKey } from "@workspace/api-client-react";
 import MapView from "@/components/map/MapView";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronRight, Navigation, Loader2, Route, Hash, LocateFixed, Calendar, Clock, Radio, User2, FileText, Globe, AlertCircle, CheckCircle } from "lucide-react";
+import { ChevronRight, Navigation, Loader2, Route, Hash, LocateFixed, Calendar, Clock, Radio, User2, FileText, Globe, AlertCircle, CheckCircle, MoveIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const PRICE_PER_KM = 2;
+
+// ── Drag-pin validation helpers ────────────────────────────────────────────
+
+function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000;
+  const φ1 = (lat1 * Math.PI) / 180, φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+  const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function normalizeStreet(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // remove accents
+    .replace(/\b(rua|r\.|avenida|av\.?|alameda|al\.?|travessa|tv\.?|estrada|est\.?|rodovia|rod\.?|praça|praca|pça|largo|viela)\b\s*/g, "")
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function streetsCompatible(typedAddress: string, reversedRoad: string | undefined): boolean {
+  if (!reversedRoad) return false;
+  const normTyped = normalizeStreet(typedAddress);
+  const normReversed = normalizeStreet(reversedRoad);
+  // Check token overlap — at least one significant word must match
+  const tokensTyped = normTyped.split(" ").filter(t => t.length > 3);
+  const tokensReversed = normReversed.split(" ").filter(t => t.length > 3);
+  return tokensTyped.some(t => tokensReversed.includes(t));
+}
+
+async function reverseGeocodeDetail(lat: number, lng: number): Promise<{
+  display_name: string;
+  address?: { road?: string; suburb?: string; city?: string; postcode?: string; house_number?: string };
+} | null> {
+  try {
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`
+    );
+    if (!r.ok) return null;
+    return await r.json();
+  } catch {
+    return null;
+  }
+}
+
+type DragState = null | "loading" | "ok" | "warning" | "far";
 
 interface LocationPoint {
   address: string;
@@ -95,6 +144,12 @@ export default function PassengerHome() {
   const [driverSearchLoading, setDriverSearchLoading] = useState(false);
   const [scheduledNote, setScheduledNote] = useState("");
   const driverDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Drag-pin state ─────────────────────────────────────────────────────
+  const [originDragState, setOriginDragState] = useState<DragState>(null);
+  const [destDragState, setDestDragState] = useState<DragState>(null);
+  const [originDragMsg, setOriginDragMsg] = useState<string>("");
+  const [destDragMsg, setDestDragMsg] = useState<string>("");
 
   // ── Availability state ─────────────────────────────────────────────────
   const [availability, setAvailability] = useState<{ driverCount: number; totalDrivers: number } | null>(null);
@@ -294,6 +349,104 @@ export default function PassengerHome() {
     }
   }, [origin, destination]);
 
+  // ── Drag-pin handlers ──────────────────────────────────────────────────
+
+  const handleOriginDragEnd = useCallback(async (lat: number, lng: number) => {
+    if (!origin) return;
+    setOriginDragState("loading");
+    setOriginDragMsg("");
+
+    const distMeters = haversineMeters(origin.lat, origin.lng, lat, lng);
+    const result = await reverseGeocodeDetail(lat, lng);
+
+    if (!result) {
+      setOriginDragState("warning");
+      setOriginDragMsg("Não foi possível verificar o endereço");
+      setOrigin(prev => prev ? { ...prev, lat, lng } : prev);
+      return;
+    }
+
+    const reversedRoad = result.address?.road ?? result.display_name.split(",")[0];
+    const compatible = streetsCompatible(originQuery, reversedRoad);
+
+    // Compose a clean short address from reversed result
+    const parts = [
+      result.address?.road,
+      result.address?.house_number,
+      result.address?.suburb,
+    ].filter(Boolean).join(", ");
+    const newShortAddress = parts || result.display_name.split(",")[0];
+
+    if (distMeters > 500) {
+      // Moved more than 500 m — very likely a different street/area
+      setOriginDragState("far");
+      setOriginDragMsg(`Muito longe da rua original (${Math.round(distMeters)} m). Verifique o ponto.`);
+      setOrigin(prev => prev ? { ...prev, lat, lng, address: result.display_name } : prev);
+      setOriginQuery(newShortAddress);
+      toast({ title: "Ponto de origem movido para área diferente", description: newShortAddress, variant: "destructive" });
+    } else if (!compatible) {
+      // Close but different street name
+      setOriginDragState("warning");
+      setOriginDragMsg(`Rua detectada: "${reversedRoad}". Confirme se está correto.`);
+      setOrigin(prev => prev ? { ...prev, lat, lng, address: result.display_name } : prev);
+      setOriginQuery(newShortAddress);
+      toast({ title: "Rua diferente detectada", description: `O pin foi para: ${reversedRoad}` });
+    } else {
+      // Compatible — update silently
+      setOriginDragState("ok");
+      setOriginDragMsg(`Ponto ajustado na ${reversedRoad}`);
+      setOrigin(prev => prev ? { ...prev, lat, lng, address: result.display_name } : prev);
+      setOriginQuery(newShortAddress);
+    }
+    setTimeout(() => setOriginDragState(null), 4000);
+  }, [origin, originQuery, toast]);
+
+  const handleDestDragEnd = useCallback(async (lat: number, lng: number) => {
+    if (!destination) return;
+    setDestDragState("loading");
+    setDestDragMsg("");
+
+    const distMeters = haversineMeters(destination.lat, destination.lng, lat, lng);
+    const result = await reverseGeocodeDetail(lat, lng);
+
+    if (!result) {
+      setDestDragState("warning");
+      setDestDragMsg("Não foi possível verificar o endereço");
+      setDestination(prev => prev ? { ...prev, lat, lng } : prev);
+      return;
+    }
+
+    const reversedRoad = result.address?.road ?? result.display_name.split(",")[0];
+    const compatible = streetsCompatible(destQuery, reversedRoad);
+
+    const parts = [
+      result.address?.road,
+      result.address?.house_number,
+      result.address?.suburb,
+    ].filter(Boolean).join(", ");
+    const newShortAddress = parts || result.display_name.split(",")[0];
+
+    if (distMeters > 500) {
+      setDestDragState("far");
+      setDestDragMsg(`Muito longe do destino original (${Math.round(distMeters)} m). Verifique o ponto.`);
+      setDestination(prev => prev ? { ...prev, lat, lng, address: result.display_name } : prev);
+      setDestQuery(newShortAddress);
+      toast({ title: "Destino movido para área diferente", description: newShortAddress, variant: "destructive" });
+    } else if (!compatible) {
+      setDestDragState("warning");
+      setDestDragMsg(`Rua detectada: "${reversedRoad}". Confirme se está correto.`);
+      setDestination(prev => prev ? { ...prev, lat, lng, address: result.display_name } : prev);
+      setDestQuery(newShortAddress);
+      toast({ title: "Rua de destino diferente", description: `O pin foi para: ${reversedRoad}` });
+    } else {
+      setDestDragState("ok");
+      setDestDragMsg(`Ponto ajustado na ${reversedRoad}`);
+      setDestination(prev => prev ? { ...prev, lat, lng, address: result.display_name } : prev);
+      setDestQuery(newShortAddress);
+    }
+    setTimeout(() => setDestDragState(null), 4000);
+  }, [destination, destQuery, toast]);
+
   const handleSubmit = () => {
     if (!origin || !destination || !offeredPrice) {
       toast({ title: "Preencha todos os campos", variant: "destructive" });
@@ -373,6 +526,8 @@ export default function PassengerHome() {
           destination={destination}
           routePoints={routePoints}
           onMapClick={handleMapClick}
+          onOriginDragEnd={origin ? handleOriginDragEnd : undefined}
+          onDestinationDragEnd={destination ? handleDestDragEnd : undefined}
           passengerPhotoUrl={user?.avatarUrl ?? null}
           passengerLabel={user?.name ? user.name.split(" ").slice(0, 2).join(" ") : "Você"}
           className="h-full w-full"
@@ -471,6 +626,26 @@ export default function PassengerHome() {
                 className="border-none bg-transparent p-0 h-auto text-xs focus-visible:ring-0"
               />
             </div>
+            {/* Drag-pin feedback for origin */}
+            {origin && originDragState && (
+              <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium animate-in fade-in duration-200 ${
+                originDragState === "loading" ? "bg-secondary text-muted-foreground" :
+                originDragState === "ok" ? "bg-green-500/10 text-green-400 border border-green-500/20" :
+                originDragState === "warning" ? "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20" :
+                "bg-destructive/10 text-destructive border border-destructive/20"
+              }`}>
+                {originDragState === "loading" ? <Loader2 className="w-3 h-3 animate-spin shrink-0" /> :
+                 originDragState === "ok" ? <CheckCircle className="w-3 h-3 shrink-0" /> :
+                 <AlertCircle className="w-3 h-3 shrink-0" />}
+                {originDragState === "loading" ? "Verificando rua..." : originDragMsg}
+              </div>
+            )}
+            {origin && !originDragState && (
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60 px-1">
+                <MoveIcon className="w-2.5 h-2.5" />
+                Arraste o pin no mapa para ajustar o ponto de origem
+              </div>
+            )}
           </div>
 
           {/* Destination */}
@@ -519,6 +694,26 @@ export default function PassengerHome() {
                 className="border-none bg-transparent p-0 h-auto text-xs focus-visible:ring-0"
               />
             </div>
+            {/* Drag-pin feedback for destination */}
+            {destination && destDragState && (
+              <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium animate-in fade-in duration-200 ${
+                destDragState === "loading" ? "bg-secondary text-muted-foreground" :
+                destDragState === "ok" ? "bg-green-500/10 text-green-400 border border-green-500/20" :
+                destDragState === "warning" ? "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20" :
+                "bg-destructive/10 text-destructive border border-destructive/20"
+              }`}>
+                {destDragState === "loading" ? <Loader2 className="w-3 h-3 animate-spin shrink-0" /> :
+                 destDragState === "ok" ? <CheckCircle className="w-3 h-3 shrink-0" /> :
+                 <AlertCircle className="w-3 h-3 shrink-0" />}
+                {destDragState === "loading" ? "Verificando rua..." : destDragMsg}
+              </div>
+            )}
+            {destination && !destDragState && (
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60 px-1">
+                <MoveIcon className="w-2.5 h-2.5" />
+                Arraste o pin no mapa para ajustar o ponto de destino
+              </div>
+            )}
           </div>
 
           {/* ── Scheduling Panel ──────────────────────────────────────────── */}
