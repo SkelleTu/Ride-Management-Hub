@@ -29,7 +29,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     query: {
       enabled: !!token,
       queryKey: getGetMeQueryKey(),
-      retry: false,
+      retry: 2,
+      retryDelay: 3000,
     },
     request: {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined
@@ -46,7 +47,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (error) {
-      handleLogout();
+      // Only force logout on actual auth failures (401/403), not network/server errors
+      const status = (error as any)?.status;
+      if (status === 401 || status === 403) {
+        handleLogout();
+      }
+      // For network errors or server errors, keep the session alive
     }
   }, [error]);
 

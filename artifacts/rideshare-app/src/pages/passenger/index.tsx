@@ -67,6 +67,20 @@ export default function PassengerHome() {
   const [isLocating, setIsLocating] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // On mount: redirect to active ride if passenger already has one in progress
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    fetch("/api/rides", { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : [])
+      .then((rides: any[]) => {
+        const activeStatuses = ["open", "negotiating", "accepted", "in_progress"];
+        const active = rides.find(r => activeStatuses.includes(r.status));
+        if (active) setLocation(`/passenger/ride/${active.id}`);
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (!navigator.geolocation) return;
     setIsLocating(true);

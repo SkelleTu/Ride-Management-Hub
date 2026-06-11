@@ -25,14 +25,28 @@ export default function Login() {
     loginMutation.mutate(
       { data: { email, password } },
       {
-        onSuccess: (data) => {
+        onSuccess: async (data) => {
           login(data.token, data.user);
-          // Determine redirect based on actual user role
           if (data.user.role === "admin") {
             setLocation("/admin");
           } else if (data.user.role === "driver") {
             setLocation("/driver");
           } else {
+            // For passengers: check if there's an active ride to resume
+            try {
+              const r = await fetch("/api/rides", {
+                headers: { Authorization: `Bearer ${data.token}` },
+              });
+              if (r.ok) {
+                const rides = await r.json();
+                const activeStatuses = ["open", "negotiating", "accepted", "in_progress"];
+                const active = rides.find((ride: any) => activeStatuses.includes(ride.status));
+                if (active) {
+                  setLocation(`/passenger/ride/${active.id}`);
+                  return;
+                }
+              }
+            } catch {}
             setLocation("/passenger");
           }
         },
