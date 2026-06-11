@@ -104,38 +104,32 @@ export function LocationGuard({ children }: LocationGuardProps) {
     tryGetLocation();
   };
 
-  if (state === "granted") return <>{children}</>;
-
-  const isChecking = state === "checking";
+  // During first check: render app normally so the native browser popup
+  // appears on a clean screen (not covered by our overlay)
+  if (state === "checking" || state === "granted") return <>{children}</>;
 
   return (
     <>
       {children}
-      {/* Full-screen blocking overlay */}
+      {/* Full-screen blocking overlay — only shown after explicit denial */}
       <div
         className="fixed inset-0 z-[9999] flex flex-col items-center justify-center p-6 text-center"
         style={{ background: "rgba(10,10,15,0.97)", backdropFilter: "blur(8px)" }}
       >
-        <div className={`mb-6 w-20 h-20 rounded-3xl flex items-center justify-center ${isChecking ? "bg-secondary" : "bg-primary/20"}`}>
-          <MapPin className={`w-10 h-10 ${isChecking ? "text-muted-foreground" : "text-primary"}`} />
+        <div className="mb-6 w-20 h-20 rounded-3xl bg-primary/20 flex items-center justify-center">
+          <MapPin className="w-10 h-10 text-primary" />
         </div>
 
-        <h2 className="text-2xl font-bold mb-2">
-          {isChecking ? "Verificando localização..." : "Localização obrigatória"}
-        </h2>
-
-        {isChecking && (
-          <div className="mt-4 animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
-        )}
+        <h2 className="text-2xl font-bold mb-3">Localização obrigatória</h2>
 
         {state === "prompt" && (
           <>
             <p className="text-muted-foreground text-sm mb-6 max-w-xs">
-              O UPcar precisa da sua localização em tempo real para conectar motoristas e passageiros com precisão durante toda a corrida.
+              O UPcar precisa da sua localização em tempo real. Toque em <strong className="text-foreground">"Ativar Localização"</strong> e depois em <strong className="text-foreground">"Permitir"</strong> na janela do navegador.
             </p>
             <Button onClick={handleRetry} disabled={retrying} className="w-full max-w-xs h-12 text-base font-bold">
               {retrying
-                ? <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Aguardando...</>
+                ? <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Aguardando permissão...</>
                 : <><MapPin className="w-4 h-4 mr-2" /> Ativar Localização</>}
             </Button>
           </>
@@ -144,22 +138,36 @@ export function LocationGuard({ children }: LocationGuardProps) {
         {state === "denied" && (
           <>
             <p className="text-muted-foreground text-sm mb-2 max-w-xs">
-              A localização está <strong className="text-destructive">bloqueada</strong>. O app não pode funcionar sem ela.
+              A localização está <strong className="text-destructive">bloqueada</strong> nas permissões do navegador.
             </p>
-            <p className="text-muted-foreground text-xs mb-6 max-w-xs leading-relaxed">
-              Toque no ícone de cadeado ou localização na barra do navegador → Permissões → Localização → Permitir. Depois toque em "Tentar novamente".
-            </p>
+
+            {/* Step-by-step visual guide */}
+            <div className="w-full max-w-xs text-left space-y-2 mb-6 mt-2">
+              <div className="flex items-start gap-3 bg-secondary/60 rounded-xl p-3">
+                <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
+                <span className="text-xs text-muted-foreground">Toque no ícone 🔒 ou <strong className="text-foreground">ⓘ</strong> na barra de endereços do navegador</span>
+              </div>
+              <div className="flex items-start gap-3 bg-secondary/60 rounded-xl p-3">
+                <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
+                <span className="text-xs text-muted-foreground">Toque em <strong className="text-foreground">Permissões do site</strong> → <strong className="text-foreground">Localização</strong></span>
+              </div>
+              <div className="flex items-start gap-3 bg-secondary/60 rounded-xl p-3">
+                <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
+                <span className="text-xs text-muted-foreground">Selecione <strong className="text-foreground">Permitir</strong> e volte ao app</span>
+              </div>
+            </div>
+
             <Button onClick={handleRetry} disabled={retrying} className="w-full max-w-xs h-12 text-base font-bold">
               {retrying
                 ? <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Verificando...</>
-                : <><RefreshCw className="w-4 h-4 mr-2" /> Tentar novamente</>}
+                : <><RefreshCw className="w-4 h-4 mr-2" /> Já ativei — Tentar novamente</>}
             </Button>
           </>
         )}
 
         {state === "unavailable" && (
           <p className="text-muted-foreground text-sm max-w-xs mt-2">
-            Seu dispositivo não suporta geolocalização. O UPcar requer um dispositivo com GPS para funcionar.
+            Seu dispositivo não suporta geolocalização. O UPcar requer um dispositivo com GPS.
           </p>
         )}
       </div>
