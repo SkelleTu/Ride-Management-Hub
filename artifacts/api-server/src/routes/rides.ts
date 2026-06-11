@@ -120,12 +120,53 @@ ridesRouter.patch("/:id/cancel", requireAuth, async (req, res) => {
   const currentUser = (req as any).user;
   const { reason } = req.body ?? {};
 
-  const [updated] = await db.update(ridesTable)
+  const [ride] = await db.select().from(ridesTable).where(eq(ridesTable.id, id));
+  if (!ride) { res.status(404).json({ error: "Ride not found" }); return; }
+
+  const isDriver = currentUser.role === "driver" || (currentUser.role === "admin" && ride.driverId === currentUser.id);
+  const driverCancellingAccepted = isDriver && (ride.status === "accepted" || ride.status === "in_progress");
+
+  let updated: typeof ridesTable.$inferSelect;
+
+  if (driverCancellingAccepted) {
+    // Driver cancelled an active ride — reopen it for new drivers
+    const [reopened] = await db.update(ridesTable)
+      .set({
+        status: "open",
+        driverId: null,
+        agreedPrice: null,
+        driverLat: null,
+        driverLng: null,
+        cancelReason: null,
+        startedAt: null,
+      })
+      .where(eq(ridesTable.id, id))
+      .returning();
+    updated = reopened;
+
+    // Reject all existing offers so drivers bid fresh
+    await db.update(offersTable)
+      .set({ status: "rejected" })
+      .where(eq(offersTable.rideId, id));
+
+    await db.insert(activityLogTable).values({
+      type: "ride_cancelled",
+      description: `Corrida #${id} reaberta — motorista ${currentUser.name} cancelou${reason ? `: ${reason}` : ""}`,
+      userId: currentUser.id,
+      userName: currentUser.name,
+    });
+
+    res.json({ ...(await buildRide(updated)), driverCancelled: true });
+    return;
+  }
+
+  // Passenger (or non-driver) cancelling — mark as cancelled normally
+  const [cancelled] = await db.update(ridesTable)
     .set({ status: "cancelled", cancelReason: reason ?? "Cancelado pelo usuário" })
     .where(eq(ridesTable.id, id))
     .returning();
 
-  if (!updated) { res.status(404).json({ error: "Ride not found" }); return; }
+  if (!cancelled) { res.status(404).json({ error: "Ride not found" }); return; }
 
   await db.insert(activityLogTable).values({
     type: "ride_cancelled",
@@ -134,7 +175,7 @@ ridesRouter.patch("/:id/cancel", requireAuth, async (req, res) => {
     userName: currentUser.name,
   });
 
-  res.json(await buildRide(updated));
+  res.json(await buildRide(cancelled));
 });
 
 // Driver broadcasts their GPS position

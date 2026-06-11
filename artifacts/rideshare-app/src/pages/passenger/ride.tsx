@@ -74,6 +74,7 @@ export default function PassengerRide({ params }: { params: { id: string } }) {
   const [customReason, setCustomReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const prevStatusRef = useRef<string | null>(null);
 
   const { data: ride, isLoading } = useGetRide(id, { query: { queryKey: getGetRideQueryKey(id), refetchInterval: 5000 } });
   const { data: offers = [] } = useListOffers(id, { query: { queryKey: getListOffersQueryKey(id), refetchInterval: 5000 } });
@@ -81,6 +82,20 @@ export default function PassengerRide({ params }: { params: { id: string } }) {
   const rejectOffer = useRejectOffer();
 
   const isConnected = ride?.status === "accepted" || ride?.status === "in_progress";
+
+  // Detect when driver cancels: ride goes from accepted/in_progress → open
+  useEffect(() => {
+    if (!ride) return;
+    const prev = prevStatusRef.current;
+    const curr = ride.status;
+    if ((prev === "accepted" || prev === "in_progress") && curr === "open") {
+      toast({
+        title: "O motorista cancelou a corrida",
+        description: "Não se preocupe — estamos buscando novos motoristas para você.",
+      });
+    }
+    prevStatusRef.current = curr;
+  }, [ride?.status]);
 
   // Passenger broadcasts GPS every 6s when ride is active
   useEffect(() => {
