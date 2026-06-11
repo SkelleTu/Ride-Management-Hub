@@ -377,13 +377,13 @@ export default function PassengerHome() {
     ].filter(Boolean).join(", ");
     const newShortAddress = parts || result.display_name.split(",")[0];
 
-    if (distMeters > 500) {
-      // Moved more than 500 m — very likely a different street/area
+    if (distMeters > 150) {
+      // Moved more than 150 m — too far for a pickup fine-tune
       setOriginDragState("far");
-      setOriginDragMsg(`Muito longe da rua original (${Math.round(distMeters)} m). Verifique o ponto.`);
+      setOriginDragMsg(`Muito longe (${Math.round(distMeters)} m). Mova apenas alguns metros para indicar onde está esperando.`);
       setOrigin(prev => prev ? { ...prev, lat, lng, address: result.display_name } : prev);
       setOriginQuery(newShortAddress);
-      toast({ title: "Ponto de origem movido para área diferente", description: newShortAddress, variant: "destructive" });
+      toast({ title: "Pin muito longe", description: "Arraste apenas alguns metros para pontuar o local exato.", variant: "destructive" });
     } else if (!compatible) {
       // Close but different street name
       setOriginDragState("warning");
