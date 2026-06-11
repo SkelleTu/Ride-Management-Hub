@@ -1,8 +1,9 @@
 import { Link } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { Menu, LogOut, Car, User, LayoutDashboard, Map } from "lucide-react";
+import { LogOut, Car, User, LayoutDashboard, Map } from "lucide-react";
 import { UPcarLogo } from "@/components/ui/UPcarLogo";
+import { UserSideMenu } from "@/components/menu/UserSideMenu";
 
 export function Navbar() {
   const { user, selectedRole, logout } = useAuth();
@@ -76,13 +77,8 @@ export function Navbar() {
           {renderNavLinks()}
         </div>
 
-        <div className="flex items-center gap-4">
-          {user ? (
-            <Button variant="ghost" size="sm" onClick={logout} className="gap-2">
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline-block">Sair</span>
-            </Button>
-          ) : null}
+        <div className="flex items-center gap-2">
+          {user ? <UserSideMenu /> : null}
         </div>
       </div>
     </nav>

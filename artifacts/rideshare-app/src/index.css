@@ -155,3 +155,46 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Accessibility: font size overrides */
+.font-large { font-size: 112%; }
+.font-large .text-xs { font-size: 0.8rem; }
+.font-large .text-sm { font-size: 0.95rem; }
+.font-large .text-base { font-size: 1.05rem; }
+
+.font-xlarge { font-size: 125%; }
+.font-xlarge .text-xs { font-size: 0.9rem; }
+.font-xlarge .text-sm { font-size: 1.05rem; }
+.font-xlarge .text-base { font-size: 1.15rem; }
+
+/* Accessibility: high contrast */
+.high-contrast {
+  --foreground: 0 0% 100%;
+  --background: 0 0% 0%;
+  --muted-foreground: 0 0% 80%;
+  --border: 0 0% 60%;
+  --primary: 142 80% 55%;
+}
+
+/* Light theme */
+:root.light {
+  --background: 0 0% 98%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --primary: 142 70% 40%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 14% 93%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 220 14% 93%;
+  --muted-foreground: 220 14% 46%;
+  --accent: 142 50% 42%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 13% 85%;
+  --input: 220 13% 85%;
+  --ring: 142 70% 40%;
+}
