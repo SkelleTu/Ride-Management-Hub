@@ -109,7 +109,7 @@ export default function RoleSelection() {
                   <User className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg">Passageiro</h3>
+                  <h3 className="font-semibold text-lg">Eu sou passageiro</h3>
                   <p className="text-sm text-muted-foreground">Solicitar viagens</p>
                 </div>
               </div>
@@ -128,7 +128,7 @@ export default function RoleSelection() {
                   <Car className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg">Motorista</h3>
+                  <h3 className="font-semibold text-lg">Eu sou motorista</h3>
                   <p className="text-sm text-muted-foreground">Oferecer viagens</p>
                 </div>
               </div>
