@@ -415,7 +415,7 @@ export function UserSideMenu() {
             )}
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-80 p-0 flex flex-col">
+        <SheetContent side="left" className="p-0 flex flex-col" style={{ width: '320px', minWidth: '320px' }}>
           <SheetHeader className="p-4 pb-0">
             <SheetTitle className="text-left text-base font-bold">Menu</SheetTitle>
           </SheetHeader>
