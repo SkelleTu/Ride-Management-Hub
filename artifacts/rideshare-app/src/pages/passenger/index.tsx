@@ -7,7 +7,7 @@ import { getListRidesQueryKey } from "@workspace/api-client-react";
 import MapView from "@/components/map/MapView";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronRight, Navigation, Loader2, Route } from "lucide-react";
+import { ChevronRight, Navigation, Loader2, Route, Hash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const PRICE_PER_KM = 2;
@@ -41,6 +41,11 @@ async function fetchRoute(origin: LocationPoint, destination: LocationPoint): Pr
   }
 }
 
+function buildFinalAddress(base: string, number: string) {
+  if (!number.trim()) return base;
+  return `${base}, nº ${number.trim()}`;
+}
+
 export default function PassengerHome() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
@@ -51,6 +56,8 @@ export default function PassengerHome() {
   const [destination, setDestination] = useState<LocationPoint | null>(null);
   const [originQuery, setOriginQuery] = useState("");
   const [destQuery, setDestQuery] = useState("");
+  const [originNumber, setOriginNumber] = useState("");
+  const [destNumber, setDestNumber] = useState("");
   const [offeredPrice, setOfferedPrice] = useState("");
   const [originSuggestions, setOriginSuggestions] = useState<any[]>([]);
   const [destSuggestions, setDestSuggestions] = useState<any[]>([]);
@@ -108,10 +115,12 @@ export default function PassengerHome() {
     if (type === "origin") {
       setOrigin(point);
       setOriginQuery(item.display_name.split(",")[0]);
+      setOriginNumber("");
       setOriginSuggestions([]);
     } else {
       setDestination(point);
       setDestQuery(item.display_name.split(",")[0]);
+      setDestNumber("");
       setDestSuggestions([]);
     }
   };
@@ -126,9 +135,11 @@ export default function PassengerHome() {
     if (!origin) {
       setOrigin({ lat, lng, address });
       setOriginQuery(address.split(",")[0]);
+      setOriginNumber("");
     } else if (!destination) {
       setDestination({ lat, lng, address });
       setDestQuery(address.split(",")[0]);
+      setDestNumber("");
     }
   }, [origin, destination]);
 
@@ -144,10 +155,10 @@ export default function PassengerHome() {
     }
     createRide.mutate({
       data: {
-        originAddress: origin.address,
+        originAddress: buildFinalAddress(origin.address, originNumber),
         originLat: origin.lat,
         originLng: origin.lng,
-        destinationAddress: destination.address,
+        destinationAddress: buildFinalAddress(destination.address, destNumber),
         destinationLat: destination.lat,
         destinationLng: destination.lng,
         offeredPrice: price,
@@ -182,57 +193,95 @@ export default function PassengerHome() {
         </div>
 
         {/* Origin */}
-        <div className="relative">
-          <div className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2.5 border border-border focus-within:border-primary transition-colors">
-            <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
-            <Input
-              data-testid="input-origin"
-              placeholder="De onde?"
-              value={originQuery}
-              onChange={(e) => { setOriginQuery(e.target.value); searchAddress(e.target.value, "origin"); }}
-              className="border-none bg-transparent p-0 h-auto text-sm focus-visible:ring-0"
-            />
+        <div className="space-y-1.5">
+          <div className="relative">
+            <div className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2.5 border border-border focus-within:border-primary transition-colors">
+              <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
+              <Input
+                data-testid="input-origin"
+                placeholder="De onde?"
+                value={originQuery}
+                onChange={(e) => {
+                  setOriginQuery(e.target.value);
+                  setOrigin(null);
+                  searchAddress(e.target.value, "origin");
+                }}
+                className="border-none bg-transparent p-0 h-auto text-sm focus-visible:ring-0"
+              />
+            </div>
+            {originSuggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
+                {originSuggestions.map((s, i) => (
+                  <button key={i} onClick={() => selectAddress(s, "origin")}
+                    className="w-full text-left px-3 py-2.5 text-sm hover:bg-secondary transition-colors border-b border-border last:border-0">
+                    <div className="font-medium truncate">{s.display_name.split(",")[0]}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {s.display_name.split(",").slice(1, 3).join(",")}
+                      {s.postcode ? ` · CEP ${s.postcode}` : ""}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          {originSuggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
-              {originSuggestions.map((s, i) => (
-                <button key={i} onClick={() => selectAddress(s, "origin")}
-                  className="w-full text-left px-3 py-2.5 text-sm hover:bg-secondary transition-colors border-b border-border last:border-0">
-                  <div className="font-medium truncate">{s.display_name.split(",")[0]}</div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {s.display_name.split(",").slice(1, 3).join(",")}
-                    {s.postcode ? ` · CEP ${s.postcode}` : ""}
-                  </div>
-                </button>
-              ))}
+          {/* Number field for origin */}
+          {origin && (
+            <div className="flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2 border border-border/60 focus-within:border-primary/60 transition-colors">
+              <Hash className="w-3 h-3 text-muted-foreground shrink-0" />
+              <Input
+                data-testid="input-origin-number"
+                placeholder="Número / complemento (ex: 123, Apto 4)"
+                value={originNumber}
+                onChange={(e) => setOriginNumber(e.target.value)}
+                className="border-none bg-transparent p-0 h-auto text-xs focus-visible:ring-0"
+              />
             </div>
           )}
         </div>
 
         {/* Destination */}
-        <div className="relative">
-          <div className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2.5 border border-border focus-within:border-accent transition-colors">
-            <Navigation className="w-3 h-3 text-accent shrink-0" />
-            <Input
-              data-testid="input-destination"
-              placeholder="Para onde?"
-              value={destQuery}
-              onChange={(e) => { setDestQuery(e.target.value); searchAddress(e.target.value, "dest"); }}
-              className="border-none bg-transparent p-0 h-auto text-sm focus-visible:ring-0"
-            />
+        <div className="space-y-1.5">
+          <div className="relative">
+            <div className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2.5 border border-border focus-within:border-accent transition-colors">
+              <Navigation className="w-3 h-3 text-accent shrink-0" />
+              <Input
+                data-testid="input-destination"
+                placeholder="Para onde?"
+                value={destQuery}
+                onChange={(e) => {
+                  setDestQuery(e.target.value);
+                  setDestination(null);
+                  searchAddress(e.target.value, "dest");
+                }}
+                className="border-none bg-transparent p-0 h-auto text-sm focus-visible:ring-0"
+              />
+            </div>
+            {destSuggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
+                {destSuggestions.map((s, i) => (
+                  <button key={i} onClick={() => selectAddress(s, "dest")}
+                    className="w-full text-left px-3 py-2.5 text-sm hover:bg-secondary transition-colors border-b border-border last:border-0">
+                    <div className="font-medium truncate">{s.display_name.split(",")[0]}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {s.display_name.split(",").slice(1, 3).join(",")}
+                      {s.postcode ? ` · CEP ${s.postcode}` : ""}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          {destSuggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
-              {destSuggestions.map((s, i) => (
-                <button key={i} onClick={() => selectAddress(s, "dest")}
-                  className="w-full text-left px-3 py-2.5 text-sm hover:bg-secondary transition-colors border-b border-border last:border-0">
-                  <div className="font-medium truncate">{s.display_name.split(",")[0]}</div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {s.display_name.split(",").slice(1, 3).join(",")}
-                    {s.postcode ? ` · CEP ${s.postcode}` : ""}
-                  </div>
-                </button>
-              ))}
+          {/* Number field for destination */}
+          {destination && (
+            <div className="flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2 border border-border/60 focus-within:border-accent/60 transition-colors">
+              <Hash className="w-3 h-3 text-muted-foreground shrink-0" />
+              <Input
+                data-testid="input-dest-number"
+                placeholder="Número / complemento (ex: 456, Bloco B)"
+                value={destNumber}
+                onChange={(e) => setDestNumber(e.target.value)}
+                className="border-none bg-transparent p-0 h-auto text-xs focus-visible:ring-0"
+              />
             </div>
           )}
         </div>

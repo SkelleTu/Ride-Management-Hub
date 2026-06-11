@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useGetRide, getGetRideQueryKey, useUpdateRideStatus } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { ArrowLeft, Navigation, MapPin, Play, CheckSquare, ExternalLink } from "lucide-react";
+import { ArrowLeft, Navigation, CheckSquare, ExternalLink, Play } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { openGpsApp } from "@/lib/gps";
 
@@ -23,29 +23,32 @@ export default function DriverRide({ params }: { params: { id: string } }) {
   const queryClient = useQueryClient();
 
   const [gpsSheetOpen, setGpsSheetOpen] = useState(false);
-  const [gpsTarget, setGpsTarget] = useState<{ lat: number; lng: number } | null>(null);
+  const [gpsTarget, setGpsTarget] = useState<{ lat: number; lng: number; label: string } | null>(null);
+  const [autoOpenedForPickup, setAutoOpenedForPickup] = useState(false);
 
   const { data: ride, isLoading } = useGetRide(id, {
     query: { queryKey: getGetRideQueryKey(id), refetchInterval: 5000 }
   });
   const updateStatus = useUpdateRideStatus();
 
-  const handleStartTrip = () => {
-    if (!ride) return;
-    // Open GPS to pickup address
-    setGpsTarget({ lat: ride.originLat, lng: ride.originLng });
-    setGpsSheetOpen(true);
-  };
+  // Auto-open GPS to pickup when driver first enters an accepted ride
+  useEffect(() => {
+    if (ride && ride.status === "accepted" && !autoOpenedForPickup) {
+      setAutoOpenedForPickup(true);
+      setGpsTarget({ lat: ride.originLat, lng: ride.originLng, label: "Embarque" });
+      setGpsSheetOpen(true);
+    }
+  }, [ride, autoOpenedForPickup]);
 
-  const handleTripStarted = () => {
+  const handleStartTrip = () => {
     if (!ride) return;
     updateStatus.mutate({ id, data: { status: "in_progress" } }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetRideQueryKey(id) });
-        // Open GPS to destination
-        setGpsTarget({ lat: ride.destinationLat, lng: ride.destinationLng });
+        toast({ title: "Viagem iniciada! Abrindo navegação ao destino..." });
+        // Auto-open GPS to destination after status update
+        setGpsTarget({ lat: ride.destinationLat, lng: ride.destinationLng, label: "Destino" });
         setGpsSheetOpen(true);
-        toast({ title: "Viagem iniciada!" });
       },
     });
   };
@@ -103,13 +106,18 @@ export default function DriverRide({ params }: { params: { id: string } }) {
         <CardContent className="p-4 space-y-3">
           <div className="flex items-start gap-3">
             <div className="w-2 h-2 rounded-full bg-primary mt-1.5 shrink-0" />
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <div className="text-xs text-muted-foreground">Embarque</div>
-              <div className="text-sm font-medium">{ride.originAddress.split(",").slice(0, 2).join(",")}</div>
+              <div className="text-sm font-medium">{ride.originAddress.split(",")[0]}</div>
+              {ride.originAddress.includes(",") && (
+                <div className="text-xs text-muted-foreground truncate">
+                  {ride.originAddress.split(",").slice(1).join(",").trim()}
+                </div>
+              )}
             </div>
             <button
-              onClick={() => { setGpsTarget({ lat: ride.originLat, lng: ride.originLng }); setGpsSheetOpen(true); }}
-              className="text-xs flex items-center gap-1 text-primary bg-primary/10 px-2 py-1 rounded-lg"
+              onClick={() => { setGpsTarget({ lat: ride.originLat, lng: ride.originLng, label: "Embarque" }); setGpsSheetOpen(true); }}
+              className="text-xs flex items-center gap-1 text-primary bg-primary/10 px-2 py-1 rounded-lg shrink-0"
             >
               <Navigation className="w-3 h-3" /> Navegar
             </button>
@@ -117,13 +125,18 @@ export default function DriverRide({ params }: { params: { id: string } }) {
           <div className="ml-1 border-l-2 border-dashed border-muted h-4" />
           <div className="flex items-start gap-3">
             <Navigation className="w-3 h-3 text-accent mt-1 shrink-0" />
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <div className="text-xs text-muted-foreground">Destino</div>
-              <div className="text-sm font-medium">{ride.destinationAddress.split(",").slice(0, 2).join(",")}</div>
+              <div className="text-sm font-medium">{ride.destinationAddress.split(",")[0]}</div>
+              {ride.destinationAddress.includes(",") && (
+                <div className="text-xs text-muted-foreground truncate">
+                  {ride.destinationAddress.split(",").slice(1).join(",").trim()}
+                </div>
+              )}
             </div>
             <button
-              onClick={() => { setGpsTarget({ lat: ride.destinationLat, lng: ride.destinationLng }); setGpsSheetOpen(true); }}
-              className="text-xs flex items-center gap-1 text-accent bg-accent/10 px-2 py-1 rounded-lg"
+              onClick={() => { setGpsTarget({ lat: ride.destinationLat, lng: ride.destinationLng, label: "Destino" }); setGpsSheetOpen(true); }}
+              className="text-xs flex items-center gap-1 text-accent bg-accent/10 px-2 py-1 rounded-lg shrink-0"
             >
               <Navigation className="w-3 h-3" /> Navegar
             </button>
@@ -137,22 +150,11 @@ export default function DriverRide({ params }: { params: { id: string } }) {
           <Button
             data-testid="button-start-trip"
             onClick={handleStartTrip}
+            disabled={updateStatus.isPending}
             className="w-full h-14 text-base font-bold bg-accent text-accent-foreground hover:bg-accent/90 rounded-xl"
           >
             <Play className="w-5 h-5 mr-2" />
-            A Bordo — Iniciar Viagem
-          </Button>
-        )}
-
-        {ride.status === "accepted" && (
-          <Button
-            data-testid="button-trip-started"
-            onClick={handleTripStarted}
-            disabled={updateStatus.isPending}
-            variant="outline"
-            className="w-full h-12 rounded-xl border-primary/50 text-primary"
-          >
-            Viagem Iniciada (abrir GPS ao destino)
+            {updateStatus.isPending ? "Iniciando..." : "Passageiro a Bordo — Iniciar Viagem"}
           </Button>
         )}
 
@@ -164,7 +166,7 @@ export default function DriverRide({ params }: { params: { id: string } }) {
             className="w-full h-14 text-base font-bold bg-primary text-primary-foreground rounded-xl"
           >
             <CheckSquare className="w-5 h-5 mr-2" />
-            Finalizar Corrida
+            {updateStatus.isPending ? "Finalizando..." : "Finalizar Corrida"}
           </Button>
         )}
       </div>
@@ -172,9 +174,10 @@ export default function DriverRide({ params }: { params: { id: string } }) {
       {/* GPS App Selector Sheet */}
       <Sheet open={gpsSheetOpen} onOpenChange={setGpsSheetOpen}>
         <SheetContent side="bottom" className="rounded-t-2xl pb-8">
-          <SheetHeader className="mb-4">
-            <SheetTitle>Abrir no GPS</SheetTitle>
+          <SheetHeader className="mb-1">
+            <SheetTitle>Navegar até o {gpsTarget?.label ?? "endereço"}</SheetTitle>
           </SheetHeader>
+          <p className="text-sm text-muted-foreground mb-4">Escolha o app de navegação:</p>
           <div className="space-y-3">
             {GPS_APPS.map(app => (
               <button
