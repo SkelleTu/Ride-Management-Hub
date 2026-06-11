@@ -1,7 +1,14 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { useCreateDriverProfile, useGetDriverProfile, getGetDriverProfileQueryKey } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useCreateDriverProfile } from "@workspace/api-client-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+
+async function fetchMyDriverProfile() {
+  const r = await fetch("/api/drivers/me", { credentials: "include" });
+  if (r.status === 404) return null;
+  if (!r.ok) return null;
+  return r.json();
+}
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,10 +36,11 @@ export default function DriverProfile() {
   const createProfile = useCreateDriverProfile();
 
   // Check if profile exists
-  const { data: profile, isLoading } = useGetDriverProfile(
-    user?.id ?? 0,
-    { query: { enabled: !!user?.id, queryKey: getGetDriverProfileQueryKey(user?.id ?? 0) } }
-  );
+  const { data: profile, isLoading } = useQuery({
+    queryKey: ["driver-profile-me", user?.id],
+    queryFn: fetchMyDriverProfile,
+    enabled: !!user?.id,
+  });
 
   const updateField = (key: string, value: any) => setFormData(p => ({ ...p, [key]: value }));
 

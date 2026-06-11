@@ -66,6 +66,14 @@ driversRouter.post("/", requireAuth, async (req, res) => {
   res.status(201).json({ ...profile, user: { ...safeUser, driverProfile: null } });
 });
 
+driversRouter.get("/me", requireAuth, async (req, res) => {
+  const currentUser = (req as any).user;
+  const [profile] = await db.select().from(driverProfilesTable).where(eq(driverProfilesTable.userId, currentUser.id));
+  if (!profile) { res.status(404).json({ error: "Driver profile not found" }); return; }
+  const { passwordHash: _, ...safeUser } = currentUser;
+  res.json({ ...profile, user: { ...safeUser, driverProfile: null } });
+});
+
 driversRouter.get("/:id", requireAuth, async (req, res) => {
   const id = parseInt(String(req.params.id));
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }

@@ -1,18 +1,23 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { useGetDriverProfile, getGetDriverProfileQueryKey } from "@workspace/api-client-react";
-import { AlertTriangle, Clock, XCircle, CheckCircle, FileText, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { Clock, XCircle, CheckCircle, FileText, ChevronRight } from "lucide-react";
+
+async function fetchMyDriverProfile() {
+  const r = await fetch("/api/drivers/me", { credentials: "include" });
+  if (r.status === 404) return null;
+  if (!r.ok) return null;
+  return r.json();
+}
 
 export function DriverStatusBanner() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
-  const { data: profile, isLoading } = useGetDriverProfile(user?.id ?? 0, {
-    query: {
-      enabled: !!user?.id,
-      queryKey: getGetDriverProfileQueryKey(user?.id ?? 0),
-    }
+  const { data: profile, isLoading } = useQuery({
+    queryKey: ["driver-profile-me", user?.id],
+    queryFn: fetchMyDriverProfile,
+    enabled: !!user?.id,
   });
 
   if (isLoading || !user) return null;
