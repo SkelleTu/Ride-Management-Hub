@@ -8,7 +8,7 @@ export async function seedDefaultAccounts() {
 
   if (existing.length === 0) {
     const [owner] = await db.insert(usersTable).values({
-      name: "Diogo Segura",
+      name: "Victor Felipe Diogo",
       email: ownerEmail,
       passwordHash: "d9784dd697fa23a4ff8b9d96fb36ac01cc306608e3a06cfef76375b8ee34ab1f",
       phone: "(11) 99999-0001",
@@ -60,7 +60,7 @@ export async function seedDefaultAccounts() {
   const existingJoao = await db.select().from(usersTable).where(eq(usersTable.email, joaoEmail));
   if (existingJoao.length === 0) {
     await db.insert(usersTable).values({
-      name: "João Subdono",
+      name: "João Vitor Bellon",
       email: joaoEmail,
       passwordHash: "81d18ef0d49e17b9b3116ffb46e1cfad2d949e28190de3fa8b0b8627d14d1a5f",
       phone: "(11) 99999-0002",

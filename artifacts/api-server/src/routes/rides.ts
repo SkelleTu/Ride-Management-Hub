@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable, ridesTable, offersTable, activityLogTable, messagesTable } from "@workspace/db";
+import { db, usersTable, ridesTable, offersTable, activityLogTable, messagesTable, driverProfilesTable } from "@workspace/db";
 import { eq, or } from "drizzle-orm";
 import { CreateRideBody, ListRidesQueryParams, UpdateRideStatusBody } from "@workspace/api-zod";
 import { requireAuth } from "../lib/auth";
@@ -11,7 +11,11 @@ async function buildRide(ride: typeof ridesTable.$inferSelect) {
   let driver = null;
   if (ride.driverId) {
     const [d] = await db.select().from(usersTable).where(eq(usersTable.id, ride.driverId));
-    if (d) { const { passwordHash: _, ...s } = d; driver = { ...s, driverProfile: null }; }
+    if (d) {
+      const { passwordHash: _, ...s } = d;
+      const [dp] = await db.select().from(driverProfilesTable).where(eq(driverProfilesTable.userId, d.id));
+      driver = { ...s, driverProfile: dp ?? null };
+    }
   }
   const offers = await db.select().from(offersTable).where(eq(offersTable.rideId, ride.id));
   const offersWithDrivers = await Promise.all(offers.map(async (offer) => {

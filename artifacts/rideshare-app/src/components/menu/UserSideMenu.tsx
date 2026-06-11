@@ -92,6 +92,16 @@ function InfoRow({ icon: Icon, label, value }: { icon: any; label: string; value
   );
 }
 
+function calcAge(birthDate: string | null | undefined): string | null {
+  if (!birthDate) return null;
+  const birth = new Date(birthDate);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return `${age} anos`;
+}
+
 function DriverProfileModal({ driver, onClose }: { driver: DriverProfile; onClose: () => void }) {
   const user = driver.user;
   const statusConfig: Record<string, { label: string; color: string; Icon: any }> = {
@@ -126,6 +136,14 @@ function DriverProfileModal({ driver, onClose }: { driver: DriverProfile; onClos
               <span className={`text-sm font-medium ${cfg.color}`}>{cfg.label}</span>
             </div>
             <Separator />
+            {user && (
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Dados Pessoais</div>
+                <InfoRow icon={User} label="Idade" value={calcAge(driver.birthDate)} />
+                <InfoRow icon={MapPin} label="Cidade" value={`${driver.city ?? ""}${driver.state ? `, ${driver.state}` : ""}`} />
+              </div>
+            )}
+            {user && <Separator />}
             <div className="space-y-2">
               <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Veículo</div>
               <InfoRow icon={Car} label="Modelo" value={`${driver.vehicleMake} ${driver.vehicleModel} ${driver.vehicleYear}`} />
@@ -138,7 +156,6 @@ function DriverProfileModal({ driver, onClose }: { driver: DriverProfile; onClos
               <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Contato</div>
               {user && <InfoRow icon={Mail} label="Email" value={user.email} />}
               {user && <InfoRow icon={Phone} label="Telefone" value={user.phone} />}
-              <InfoRow icon={MapPin} label="Cidade" value={`${driver.city ?? ""}${driver.state ? `, ${driver.state}` : ""}`} />
             </div>
             <Separator />
             <div className="space-y-2">

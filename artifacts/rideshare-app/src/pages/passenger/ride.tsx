@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import MapView from "@/components/map/MapView";
-import { MapPin, Navigation, Star, CheckCircle, XCircle, ArrowLeft, Phone, MessageCircle, X, Send, Car } from "lucide-react";
+import { MapPin, Navigation, Star, CheckCircle, XCircle, ArrowLeft, Phone, MessageCircle, X, Send, Car, Hash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -245,6 +245,20 @@ export default function PassengerRide({ params }: { params: { id: string } }) {
                       <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
                       {ride.driver.rating?.toFixed(1) ?? "Novo"} · {ride.driver.totalRides} corridas
                     </div>
+                    {(ride.driver as any).driverProfile && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                        <Car className="w-3 h-3 shrink-0" />
+                        <span className="truncate">
+                          {(ride.driver as any).driverProfile.vehicleMake} {(ride.driver as any).driverProfile.vehicleModel} {(ride.driver as any).driverProfile.vehicleYear} · {(ride.driver as any).driverProfile.vehicleColor}
+                        </span>
+                      </div>
+                    )}
+                    {(ride.driver as any).driverProfile?.vehiclePlate && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Hash className="w-3 h-3 shrink-0" />
+                        <span className="font-medium">{(ride.driver as any).driverProfile.vehiclePlate}</span>
+                      </div>
+                    )}
                   </div>
                   {ride.driver.phone && (
                     <a href={`tel:${ride.driver.phone}`} className="flex items-center gap-1 text-xs bg-green-500/20 text-green-400 px-3 py-1.5 rounded-lg shrink-0">
