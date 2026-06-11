@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable, ridesTable, offersTable, activityLogTable } from "@workspace/db";
+import { db, usersTable, ridesTable, offersTable, activityLogTable, messagesTable } from "@workspace/db";
 import { eq, or } from "drizzle-orm";
 import { CreateRideBody, ListRidesQueryParams, UpdateRideStatusBody } from "@workspace/api-zod";
 import { requireAuth } from "../lib/auth";
@@ -118,9 +118,10 @@ ridesRouter.patch("/:id/status", requireAuth, async (req, res) => {
 ridesRouter.patch("/:id/cancel", requireAuth, async (req, res) => {
   const id = parseInt(String(req.params.id));
   const currentUser = (req as any).user;
+  const { reason } = req.body ?? {};
 
   const [updated] = await db.update(ridesTable)
-    .set({ status: "cancelled", cancelReason: "Cancelado pelo usuário" })
+    .set({ status: "cancelled", cancelReason: reason ?? "Cancelado pelo usuário" })
     .where(eq(ridesTable.id, id))
     .returning();
 
@@ -128,10 +129,49 @@ ridesRouter.patch("/:id/cancel", requireAuth, async (req, res) => {
 
   await db.insert(activityLogTable).values({
     type: "ride_cancelled",
-    description: `Corrida #${id} cancelada por ${currentUser.name}`,
+    description: `Corrida #${id} cancelada por ${currentUser.name}${reason ? `: ${reason}` : ""}`,
     userId: currentUser.id,
     userName: currentUser.name,
   });
 
   res.json(await buildRide(updated));
+});
+
+// Driver broadcasts their GPS position
+ridesRouter.patch("/:id/location", requireAuth, async (req, res) => {
+  const id = parseInt(String(req.params.id));
+  const { lat, lng } = req.body ?? {};
+  if (typeof lat !== "number" || typeof lng !== "number") {
+    res.status(400).json({ error: "lat and lng required" }); return;
+  }
+  const [updated] = await db.update(ridesTable)
+    .set({ driverLat: lat, driverLng: lng })
+    .where(eq(ridesTable.id, id))
+    .returning();
+  if (!updated) { res.status(404).json({ error: "Ride not found" }); return; }
+  res.json({ ok: true });
+});
+
+// Get messages for a ride
+ridesRouter.get("/:id/messages", requireAuth, async (req, res) => {
+  const id = parseInt(String(req.params.id));
+  const msgs = await db.select().from(messagesTable).where(eq(messagesTable.rideId, id));
+  res.json(msgs);
+});
+
+// Send a message
+ridesRouter.post("/:id/messages", requireAuth, async (req, res) => {
+  const id = parseInt(String(req.params.id));
+  const currentUser = (req as any).user;
+  const { content } = req.body ?? {};
+  if (!content || typeof content !== "string" || !content.trim()) {
+    res.status(400).json({ error: "content required" }); return;
+  }
+  const [msg] = await db.insert(messagesTable).values({
+    rideId: id,
+    senderId: currentUser.id,
+    senderName: currentUser.name,
+    content: content.trim(),
+  }).returning();
+  res.status(201).json(msg);
 });

@@ -21,6 +21,8 @@ export const ridesTable = pgTable("rides", {
   startedAt: timestamp("started_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   cancelReason: text("cancel_reason"),
+  driverLat: real("driver_lat"),
+  driverLng: real("driver_lng"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

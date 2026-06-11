@@ -4,6 +4,7 @@ import L from 'leaflet';
 interface MapViewProps {
   origin?: { lat: number; lng: number } | null;
   destination?: { lat: number; lng: number } | null;
+  driverPosition?: { lat: number; lng: number } | null;
   routePoints?: [number, number][];
   onMapClick?: (lat: number, lng: number) => void;
   className?: string;
@@ -28,10 +29,16 @@ const destinationIcon = new L.Icon({
   iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
 });
 
-export default function MapView({ origin, destination, routePoints, onMapClick, className = "h-full w-full" }: MapViewProps) {
+const driverIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+  iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+});
+
+export default function MapView({ origin, destination, driverPosition, routePoints, onMapClick, className = "h-full w-full" }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
-  const markersRef = useRef<{ origin?: L.Marker; destination?: L.Marker }>({});
+  const markersRef = useRef<{ origin?: L.Marker; destination?: L.Marker; driver?: L.Marker }>({});
   const polylineRef = useRef<L.Polyline | null>(null);
 
   useEffect(() => {
@@ -51,10 +58,7 @@ export default function MapView({ origin, destination, routePoints, onMapClick, 
       });
     }
 
-    // Force recalculation after paint so Leaflet sees the real pixel dimensions
-    setTimeout(() => {
-      mapInstance.current?.invalidateSize();
-    }, 100);
+    setTimeout(() => { mapInstance.current?.invalidateSize(); }, 100);
   }, [onMapClick]);
 
   useEffect(() => {
@@ -73,7 +77,8 @@ export default function MapView({ origin, destination, routePoints, onMapClick, 
       if (markersRef.current.origin) {
         markersRef.current.origin.setLatLng([origin.lat, origin.lng]);
       } else {
-        markersRef.current.origin = L.marker([origin.lat, origin.lng], { icon: originIcon }).addTo(mapInstance.current);
+        markersRef.current.origin = L.marker([origin.lat, origin.lng], { icon: originIcon })
+          .bindPopup('Embarque').addTo(mapInstance.current);
       }
     }
 
@@ -81,21 +86,40 @@ export default function MapView({ origin, destination, routePoints, onMapClick, 
       if (markersRef.current.destination) {
         markersRef.current.destination.setLatLng([destination.lat, destination.lng]);
       } else {
-        markersRef.current.destination = L.marker([destination.lat, destination.lng], { icon: destinationIcon }).addTo(mapInstance.current);
+        markersRef.current.destination = L.marker([destination.lat, destination.lng], { icon: destinationIcon })
+          .bindPopup('Destino').addTo(mapInstance.current);
       }
     }
 
-    if (origin && destination) {
+    const points = [origin, destination].filter(Boolean) as { lat: number; lng: number }[];
+    if (points.length === 2) {
       mapInstance.current.fitBounds(
-        L.latLngBounds([origin.lat, origin.lng], [destination.lat, destination.lng]),
+        L.latLngBounds(points.map(p => [p.lat, p.lng] as [number, number])),
         { padding: [60, 60] }
       );
-    } else if (origin) {
-      mapInstance.current.setView([origin.lat, origin.lng], 15);
-    } else if (destination) {
-      mapInstance.current.setView([destination.lat, destination.lng], 15);
+    } else if (points.length === 1) {
+      mapInstance.current.setView([points[0].lat, points[0].lng], 15);
     }
   }, [origin, destination]);
+
+  useEffect(() => {
+    if (!mapInstance.current) return;
+
+    if (!driverPosition && markersRef.current.driver) {
+      mapInstance.current.removeLayer(markersRef.current.driver);
+      delete markersRef.current.driver;
+      return;
+    }
+
+    if (driverPosition) {
+      if (markersRef.current.driver) {
+        markersRef.current.driver.setLatLng([driverPosition.lat, driverPosition.lng]);
+      } else {
+        markersRef.current.driver = L.marker([driverPosition.lat, driverPosition.lng], { icon: driverIcon })
+          .bindPopup('Motorista').addTo(mapInstance.current!);
+      }
+    }
+  }, [driverPosition]);
 
   useEffect(() => {
     if (!mapInstance.current) return;
@@ -107,12 +131,7 @@ export default function MapView({ origin, destination, routePoints, onMapClick, 
 
     if (routePoints && routePoints.length > 1) {
       polylineRef.current = L.polyline(routePoints, {
-        color: '#22c55e',
-        weight: 4,
-        opacity: 0.85,
-        dashArray: undefined,
-        lineCap: 'round',
-        lineJoin: 'round',
+        color: '#22c55e', weight: 4, opacity: 0.85, lineCap: 'round', lineJoin: 'round',
       }).addTo(mapInstance.current);
     }
   }, [routePoints]);
