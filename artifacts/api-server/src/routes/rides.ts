@@ -42,42 +42,29 @@ async function hasSchedulingConflict(
   const windowStart = new Date(proposedStart.getTime() - SCHEDULE_BUFFER_MS);
   const windowEnd = new Date(proposedEnd.getTime() + SCHEDULE_BUFFER_MS);
 
-  // Get all accepted/confirmed scheduled rides for this driver
+  // Fetch all rides belonging to this driver that are scheduled+confirmed,
+  // OR accepted/in-progress (whether scheduled or not)
   const driverRides = await db.select().from(ridesTable).where(
     and(
       eq(ridesTable.driverId, driverId),
-      inArray(ridesTable.status, ["accepted", "in_progress"])
+      inArray(ridesTable.status, ["accepted", "in_progress", "open", "negotiating"])
     )
   );
 
   for (const r of driverRides) {
     if (r.isScheduled && r.scheduledFor) {
+      // Scheduled ride: compare against its future time window
       const rideStart = new Date(r.scheduledFor);
       const durMin = r.estimatedDuration ? Math.ceil(r.estimatedDuration / 60) : 60;
       const rideEnd = new Date(rideStart.getTime() + durMin * 60 * 1000);
-      // Overlap check
       if (windowStart < rideEnd && windowEnd > rideStart) {
         return { conflict: true, conflictingRide: r };
       }
-    } else if (!r.isScheduled && (r.status === "accepted" || r.status === "in_progress")) {
-      // Active non-scheduled ride — driver is currently busy
-      return { conflict: true, conflictingRide: r };
-    }
-  }
-
-  // Also check confirmed scheduled rides (scheduledStatus = 'confirmed')
-  const confirmedScheduled = await db.select().from(ridesTable).where(
-    and(
-      eq(ridesTable.driverId, driverId),
-      eq(ridesTable.isScheduled, true),
-      eq(ridesTable.scheduledStatus, "confirmed")
-    )
-  );
-
-  for (const r of confirmedScheduled) {
-    if (r.scheduledFor) {
-      const rideStart = new Date(r.scheduledFor);
+    } else if (!r.isScheduled) {
+      // Non-scheduled active ride: estimate its end time as now + estimatedDuration
+      // This prevents incorrectly blocking future slots for rides that are almost over
       const durMin = r.estimatedDuration ? Math.ceil(r.estimatedDuration / 60) : 60;
+      const rideStart = new Date(); // assume started around now (conservative)
       const rideEnd = new Date(rideStart.getTime() + durMin * 60 * 1000);
       if (windowStart < rideEnd && windowEnd > rideStart) {
         return { conflict: true, conflictingRide: r };
@@ -227,11 +214,14 @@ ridesRouter.get("/availability", requireAuth, async (req, res) => {
   const totalDrivers = approvedDrivers.length;
   const approvedDriverIds = new Set(approvedDrivers.map(d => d.userId));
 
-  // All confirmed scheduled rides (with a driver assigned)
+  // All scheduled rides that are confirmed OR accepted/in-progress (to catch all active bookings)
   const confirmedRides = await db.select().from(ridesTable).where(
     and(
       eq(ridesTable.isScheduled, true),
-      eq(ridesTable.scheduledStatus, "confirmed")
+      or(
+        eq(ridesTable.scheduledStatus, "confirmed"),
+        inArray(ridesTable.status, ["accepted", "in_progress"])
+      )
     )
   );
 
@@ -437,14 +427,23 @@ ridesRouter.patch("/:id/accept-scheduled", requireAuth, async (req, res) => {
     }
   }
 
+  // Atomic update: only succeeds if scheduledStatus is still 'pending_acceptance'.
+  // This prevents two drivers from simultaneously accepting the same public ride.
   const [updated] = await db.update(ridesTable)
     .set({
       driverId: currentUser.id,
       scheduledStatus: "confirmed",
       status: "accepted",
     })
-    .where(eq(ridesTable.id, id))
+    .where(and(
+      eq(ridesTable.id, id),
+      eq(ridesTable.scheduledStatus, "pending_acceptance")
+    ))
     .returning();
+
+  if (!updated) {
+    res.status(409).json({ error: "Esta corrida já foi aceita por outro motorista" }); return;
+  }
 
   await db.insert(activityLogTable).values({
     type: "ride_completed",
@@ -469,6 +468,14 @@ ridesRouter.patch("/:id/decline-scheduled", requireAuth, async (req, res) => {
   const [ride] = await db.select().from(ridesTable).where(eq(ridesTable.id, id));
   if (!ride) { res.status(404).json({ error: "Ride not found" }); return; }
   if (!ride.isScheduled) { res.status(400).json({ error: "This is not a scheduled ride" }); return; }
+
+  // Authorization: directed rides can only be declined by the intended/assigned driver
+  if (ride.schedulingType === "directed") {
+    const isIntendedDriver = ride.directedToDriverId === currentUser.id || ride.driverId === currentUser.id;
+    if (!isIntendedDriver) {
+      res.status(403).json({ error: "You can only decline rides directed to you" }); return;
+    }
+  }
 
   // For directed rides: mark as declined so it can be re-broadcast or admin handles it
   // For public rides: just ignore (driver declines but ride stays available for others)
