@@ -32,22 +32,27 @@ export default function DriverHome() {
   });
 
   // Poll for accepted/in_progress ride assigned to this driver and redirect
-  useQuery({
-    queryKey: ["driver-active-ride", user?.id],
-    queryFn: async () => {
-      const token = localStorage.getItem("token");
-      const r = await fetch(`/api/rides?driverId=${user!.id}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      });
-      if (!r.ok) return null;
-      const list: any[] = await r.json();
-      const active = list.find(ride => ride.status === "accepted" || ride.status === "in_progress");
-      if (active) setLocation(`/driver/ride/${active.id}`);
-      return active ?? null;
-    },
-    enabled: !!user?.id,
-    refetchInterval: 5000,
-  });
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+
+    const check = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const r = await fetch(`/api/rides?driverId=${user.id}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        if (!r.ok || cancelled) return;
+        const list: any[] = await r.json();
+        const active = list.find(ride => ride.status === "accepted" || ride.status === "in_progress");
+        if (active && !cancelled) setLocation(`/driver/ride/${active.id}`);
+      } catch { /* ignore */ }
+    };
+
+    check();
+    const interval = setInterval(check, 5000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [user?.id]);
 
   const isApproved = profile?.status === "approved";
 
