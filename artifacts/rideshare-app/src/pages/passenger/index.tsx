@@ -145,6 +145,9 @@ export default function PassengerHome() {
   const [scheduledNote, setScheduledNote] = useState("");
   const driverDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── Active map field (which pin map clicks go to) ──────────────────────
+  const [activeField, setActiveField] = useState<"origin" | "destination">("origin");
+
   // ── Drag-pin state ─────────────────────────────────────────────────────
   const [originDragState, setOriginDragState] = useState<DragState>(null);
   const [destDragState, setDestDragState] = useState<DragState>(null);
@@ -338,16 +341,21 @@ export default function PassengerHome() {
       const data = await r.json();
       if (data.display_name) address = data.display_name;
     } catch {}
-    if (!origin) {
+    const shortAddress = address.split(",")[0];
+    if (activeField === "origin") {
       setOrigin({ lat, lng, address });
-      setOriginQuery(address.split(",")[0]);
+      setOriginQuery(shortAddress);
       setOriginNumber("");
-    } else if (!destination) {
+      setOriginSuggestions([]);
+      // Auto-advance to destination if not set yet
+      if (!destination) setActiveField("destination");
+    } else {
       setDestination({ lat, lng, address });
-      setDestQuery(address.split(",")[0]);
+      setDestQuery(shortAddress);
       setDestNumber("");
+      setDestSuggestions([]);
     }
-  }, [origin, destination]);
+  }, [activeField, destination]);
 
   // ── Drag-pin handlers ──────────────────────────────────────────────────
 
@@ -584,6 +592,7 @@ export default function PassengerHome() {
                   autoCorrect="off"
                   autoCapitalize="off"
                   spellCheck={false}
+                  onFocus={() => setActiveField("origin")}
                   onChange={(e) => {
                     setOriginQuery(e.target.value);
                     setOrigin(null);
@@ -640,6 +649,35 @@ export default function PassengerHome() {
             )}
           </div>
 
+          {/* Map pin mode selector */}
+          <div className="flex items-center gap-1.5 bg-secondary/50 rounded-xl p-1 border border-border/60">
+            <button
+              onClick={() => setActiveField("origin")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-medium transition-all ${
+                activeField === "origin"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <div className={`w-2 h-2 rounded-full shrink-0 ${activeField === "origin" ? "bg-primary-foreground" : "bg-primary"}`} />
+              {origin ? "Embarque ✓" : "Pontuar embarque"}
+            </button>
+            <button
+              onClick={() => setActiveField("destination")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-medium transition-all ${
+                activeField === "destination"
+                  ? "bg-accent text-accent-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Navigation className={`w-3 h-3 shrink-0 ${activeField === "destination" ? "text-accent-foreground" : "text-accent"}`} />
+              {destination ? "Destino ✓" : "Pontuar destino"}
+            </button>
+          </div>
+          <p className="text-[10px] text-muted-foreground/60 text-center -mt-1">
+            Toque no mapa para posicionar o pin do {activeField === "origin" ? "embarque" : "destino"}
+          </p>
+
           {/* Destination */}
           <div className="space-y-1.5">
             <div className="relative">
@@ -653,6 +691,7 @@ export default function PassengerHome() {
                   autoCorrect="off"
                   autoCapitalize="off"
                   spellCheck={false}
+                  onFocus={() => setActiveField("destination")}
                   onChange={(e) => {
                     setDestQuery(e.target.value);
                     setDestination(null);
