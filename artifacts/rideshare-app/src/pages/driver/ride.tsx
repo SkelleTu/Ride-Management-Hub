@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import MapView from "@/components/map/MapView";
+import { RatingModal } from "@/components/RatingModal";
 import { ArrowLeft, Navigation, CheckSquare, ExternalLink, Play, Phone, MessageCircle, X, Send, Star, Car } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { openGpsApp } from "@/lib/gps";
@@ -75,6 +76,9 @@ export default function DriverRide({ params }: { params: { id: string } }) {
   const [customReason, setCustomReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
   const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [ratingOpen, setRatingOpen] = useState(false);
+  const [completedPassengerName, setCompletedPassengerName] = useState("");
+  const [completedRideId, setCompletedRideId] = useState<number | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const { data: ride, isLoading } = useGetRide(id, {
@@ -146,8 +150,9 @@ export default function DriverRide({ params }: { params: { id: string } }) {
   const handleComplete = () => {
     updateStatus.mutate({ id, data: { status: "completed" } }, {
       onSuccess: () => {
-        toast({ title: "Corrida finalizada!" });
-        setLocation("/driver");
+        setCompletedPassengerName(ride?.passenger?.name ?? "Passageiro");
+        setCompletedRideId(id);
+        setRatingOpen(true);
       },
     });
   };
@@ -406,6 +411,20 @@ export default function DriverRide({ params }: { params: { id: string } }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Rating Modal */}
+      {ratingOpen && completedRideId !== null && (
+        <RatingModal
+          open={ratingOpen}
+          targetName={completedPassengerName}
+          targetRole="passageiro"
+          rideId={completedRideId}
+          onDone={() => {
+            setRatingOpen(false);
+            setLocation("/driver");
+          }}
+        />
+      )}
     </div>
   );
 }

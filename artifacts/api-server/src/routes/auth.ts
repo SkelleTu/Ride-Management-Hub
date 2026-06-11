@@ -51,6 +51,10 @@ authRouter.post("/login", async (req, res) => {
     res.status(401).json({ error: "Email ou senha inválidos" });
     return;
   }
+  if (user.isSuspended) {
+    res.status(403).json({ error: "Sua conta foi suspensa. Entre em contato com o suporte." });
+    return;
+  }
   // Load driver profile if driver
   let driverProfile = null;
   if (user.role === "driver") {

@@ -34,6 +34,7 @@ import AdminPassengers from "@/pages/admin/passengers";
 import AdminRides from "@/pages/admin/rides";
 import AdminUsers from "@/pages/admin/users";
 import AdminScheduled from "@/pages/admin/scheduled";
+import AdminFeedbacks from "@/pages/admin/feedbacks";
 
 const queryClient = new QueryClient();
 
@@ -177,6 +178,13 @@ function Router() {
         <ProtectedRoute allowedRoles={["admin"]}>
           <AppLayout>
             <AdminScheduled />
+          </AppLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/feedbacks">
+        <ProtectedRoute allowedRoles={["admin"]}>
+          <AppLayout>
+            <AdminFeedbacks />
           </AppLayout>
         </ProtectedRoute>
       </Route>

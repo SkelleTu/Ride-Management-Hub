@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, usersTable, ridesTable, driverProfilesTable, activityLogTable, offersTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { db, usersTable, ridesTable, driverProfilesTable, activityLogTable, offersTable, rideFeedbacksTable } from "@workspace/db";
+import { eq, and, desc } from "drizzle-orm";
 import { requireAdmin } from "../lib/auth";
 
 export const adminRouter = Router();
@@ -103,4 +103,49 @@ adminRouter.patch("/scheduled-rides/:id/reassign", requireAdmin, async (req, res
     .returning();
   if (!updated) { res.status(404).json({ error: "Scheduled ride not found" }); return; }
   res.json(updated);
+});
+
+// GET /admin/feedbacks — all ride feedbacks with reviewer/reviewee info
+adminRouter.get("/feedbacks", requireAdmin, async (req, res) => {
+  const feedbacks = await db.select().from(rideFeedbacksTable).orderBy(desc(rideFeedbacksTable.createdAt));
+
+  const result = await Promise.all(feedbacks.map(async (fb) => {
+    const [reviewer] = await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, fb.reviewerId));
+    const [reviewee] = await db.select({ name: usersTable.name, isSuspended: usersTable.isSuspended }).from(usersTable).where(eq(usersTable.id, fb.revieweeId));
+    return {
+      ...fb,
+      reviewerName: reviewer?.name ?? "Desconhecido",
+      revieweeName: reviewee?.name ?? "Desconhecido",
+      revieweeSuspended: reviewee?.isSuspended ?? false,
+    };
+  }));
+
+  res.json(result);
+});
+
+// PATCH /admin/users/:id/suspend — suspend or unsuspend a user
+adminRouter.patch("/users/:id/suspend", requireAdmin, async (req, res) => {
+  const id = parseInt(String(req.params.id));
+  const { suspended, reason } = req.body ?? {};
+
+  if (typeof suspended !== "boolean") {
+    res.status(400).json({ error: "suspended (boolean) required" }); return;
+  }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+
+  const [updated] = await db.update(usersTable).set({
+    isSuspended: suspended,
+    suspendedReason: suspended ? (reason ?? "Suspenso pelo administrador") : null,
+  }).where(eq(usersTable.id, id)).returning();
+
+  await db.insert(activityLogTable).values({
+    type: suspended ? "driver_denied" : "driver_approved",
+    description: `Usuário ${user.name} ${suspended ? "suspenso" : "reativado"} pelo administrador${reason ? `: ${reason}` : ""}`,
+    userId: id,
+    userName: user.name,
+  });
+
+  res.json({ ok: true, user: updated });
 });

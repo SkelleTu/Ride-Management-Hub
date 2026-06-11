@@ -6,6 +6,7 @@ import { driversRouter } from "./drivers";
 import { ridesRouter } from "./rides";
 import { offersRouter } from "./offers";
 import { adminRouter } from "./admin";
+import { feedbacksRouter } from "./feedbacks";
 import proxyRouter from "./proxy";
 
 const router: IRouter = Router();
@@ -15,6 +16,7 @@ router.use("/auth", authRouter);
 router.use("/users", usersRouter);
 router.use("/drivers", driversRouter);
 router.use("/rides", ridesRouter);
+router.use("/rides/:id/feedback", feedbacksRouter);
 router.use("/rides/:rideId/offers", offersRouter);
 router.use("/admin", adminRouter);
 router.use("/proxy", proxyRouter);

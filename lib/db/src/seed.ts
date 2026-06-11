@@ -100,7 +100,7 @@ export async function seedDefaultAccounts() {
       passwordHash: "efb7f9242f510e64101f87d5de8ce7b0d25a5be5136a36d4b653c4feda9c37f4",
       phone: "(11) 97777-0001",
       role: "driver",
-      rating: 4.9,
+      rating: 4.6,
       totalRides: 45,
     }).returning();
 

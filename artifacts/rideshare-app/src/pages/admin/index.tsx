@@ -2,7 +2,7 @@ import { useLocation } from "wouter";
 import { useGetAdminStats, getGetAdminStatsQueryKey, useGetRecentActivity, getGetRecentActivityQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Car, MapPin, TrendingUp, Clock, ChevronRight, AlertCircle, Map } from "lucide-react";
+import { Users, Car, MapPin, TrendingUp, Clock, ChevronRight, AlertCircle, Map, MessageSquare } from "lucide-react";
 
 export default function AdminHome() {
   const [, setLocation] = useLocation();
@@ -99,6 +99,7 @@ export default function AdminHome() {
           { label: "Passageiros", path: "/admin/passengers", sub: `${stats?.totalPassengers ?? 0} cadastrados` },
           { label: "Corridas", path: "/admin/rides", sub: `${stats?.activeRides ?? 0} ativas` },
           { label: "Todos Usuários", path: "/admin/users", sub: "Gerenciar contas" },
+          { label: "Feedbacks", path: "/admin/feedbacks", sub: "Avaliações e denúncias" },
         ].map(({ label, path, sub }) => (
           <button key={path} onClick={() => setLocation(path)}
             className="flex flex-col items-start p-4 bg-secondary rounded-xl hover:bg-secondary/80 transition-colors text-left">

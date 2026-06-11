@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import MapView from "@/components/map/MapView";
+import { RatingModal } from "@/components/RatingModal";
 import { MapPin, Navigation, Star, CheckCircle, XCircle, ArrowLeft, Phone, MessageCircle, X, Send, Car, Hash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -73,6 +74,8 @@ export default function PassengerRide({ params }: { params: { id: string } }) {
   const [cancelReason, setCancelReason] = useState("");
   const [customReason, setCustomReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
+  const [ratingOpen, setRatingOpen] = useState(false);
+  const [ratedRideId, setRatedRideId] = useState<number | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const prevStatusRef = useRef<string | null>(null);
 
@@ -83,7 +86,7 @@ export default function PassengerRide({ params }: { params: { id: string } }) {
 
   const isConnected = ride?.status === "accepted" || ride?.status === "in_progress";
 
-  // Detect when driver cancels: ride goes from accepted/in_progress → open
+  // Detect status transitions
   useEffect(() => {
     if (!ride) return;
     const prev = prevStatusRef.current;
@@ -93,6 +96,13 @@ export default function PassengerRide({ params }: { params: { id: string } }) {
         title: "O motorista cancelou a corrida",
         description: "Não se preocupe — estamos buscando novos motoristas para você.",
       });
+    }
+    // Show rating modal when ride transitions to completed
+    if (prev === "in_progress" && curr === "completed") {
+      if (ratedRideId !== ride.id) {
+        setRatedRideId(ride.id);
+        setRatingOpen(true);
+      }
     }
     prevStatusRef.current = curr;
   }, [ride?.status]);
@@ -480,6 +490,20 @@ export default function PassengerRide({ params }: { params: { id: string } }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Rating Modal — shown when ride is detected as completed */}
+      {ratingOpen && ride && (
+        <RatingModal
+          open={ratingOpen}
+          targetName={ride.driver?.name ?? "Motorista"}
+          targetRole="motorista"
+          rideId={ride.id}
+          onDone={() => {
+            setRatingOpen(false);
+            setLocation("/passenger");
+          }}
+        />
+      )}
     </div>
   );
 }
