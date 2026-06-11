@@ -225,18 +225,16 @@ export default function PassengerHome() {
             )}
           </div>
           {/* Number field for origin */}
-          {origin && (
-            <div className="flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2 border border-border/60 focus-within:border-primary/60 transition-colors">
-              <Hash className="w-3 h-3 text-muted-foreground shrink-0" />
-              <Input
-                data-testid="input-origin-number"
-                placeholder="Número / complemento (ex: 123, Apto 4)"
-                value={originNumber}
-                onChange={(e) => setOriginNumber(e.target.value)}
-                className="border-none bg-transparent p-0 h-auto text-xs focus-visible:ring-0"
-              />
-            </div>
-          )}
+          <div className="flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2 border border-border/60 focus-within:border-primary/60 transition-colors">
+            <Hash className="w-3 h-3 text-muted-foreground shrink-0" />
+            <Input
+              data-testid="input-origin-number"
+              placeholder="Número / complemento (ex: 123, Apto 4)"
+              value={originNumber}
+              onChange={(e) => setOriginNumber(e.target.value)}
+              className="border-none bg-transparent p-0 h-auto text-xs focus-visible:ring-0"
+            />
+          </div>
         </div>
 
         {/* Destination */}
@@ -272,18 +270,16 @@ export default function PassengerHome() {
             )}
           </div>
           {/* Number field for destination */}
-          {destination && (
-            <div className="flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2 border border-border/60 focus-within:border-accent/60 transition-colors">
-              <Hash className="w-3 h-3 text-muted-foreground shrink-0" />
-              <Input
-                data-testid="input-dest-number"
-                placeholder="Número / complemento (ex: 456, Bloco B)"
-                value={destNumber}
-                onChange={(e) => setDestNumber(e.target.value)}
-                className="border-none bg-transparent p-0 h-auto text-xs focus-visible:ring-0"
-              />
-            </div>
-          )}
+          <div className="flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2 border border-border/60 focus-within:border-accent/60 transition-colors">
+            <Hash className="w-3 h-3 text-muted-foreground shrink-0" />
+            <Input
+              data-testid="input-dest-number"
+              placeholder="Número / complemento (ex: 456, Bloco B)"
+              value={destNumber}
+              onChange={(e) => setDestNumber(e.target.value)}
+              className="border-none bg-transparent p-0 h-auto text-xs focus-visible:ring-0"
+            />
+          </div>
         </div>
 
         {/* Price estimate card */}
