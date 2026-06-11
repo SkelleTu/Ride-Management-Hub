@@ -9,20 +9,20 @@ import { UPcarLogo } from "@/components/ui/UPcarLogo";
 import { motion } from "framer-motion";
 
 const FLOATING_ICONS = [
-  { Icon: Car,         x: "8%",   y: "12%",  size: 36, opacity: 0.18, duration: 6.2, delay: 0,    rotate: -15 },
-  { Icon: MapPin,      x: "88%",  y: "8%",   size: 28, opacity: 0.14, duration: 7.5, delay: 1.2,  rotate: 10  },
-  { Icon: Navigation,  x: "75%",  y: "72%",  size: 32, opacity: 0.16, duration: 5.8, delay: 0.5,  rotate: 20  },
-  { Icon: Clock,       x: "5%",   y: "65%",  size: 26, opacity: 0.13, duration: 8.1, delay: 2.1,  rotate: -8  },
-  { Icon: Star,        x: "92%",  y: "42%",  size: 22, opacity: 0.15, duration: 6.7, delay: 1.8,  rotate: 15  },
-  { Icon: Shield,      x: "18%",  y: "80%",  size: 30, opacity: 0.12, duration: 7.2, delay: 0.8,  rotate: -20 },
-  { Icon: Zap,         x: "82%",  y: "25%",  size: 24, opacity: 0.17, duration: 5.4, delay: 3.0,  rotate: 8   },
-  { Icon: Route,       x: "3%",   y: "35%",  size: 28, opacity: 0.13, duration: 8.8, delay: 1.5,  rotate: 12  },
-  { Icon: Smartphone,  x: "65%",  y: "88%",  size: 26, opacity: 0.14, duration: 6.5, delay: 2.5,  rotate: -10 },
-  { Icon: CreditCard,  x: "25%",  y: "6%",   size: 24, opacity: 0.12, duration: 7.9, delay: 0.3,  rotate: -5  },
-  { Icon: Car,         x: "55%",  y: "15%",  size: 20, opacity: 0.10, duration: 9.0, delay: 4.0,  rotate: 25  },
-  { Icon: MapPin,      x: "40%",  y: "90%",  size: 22, opacity: 0.11, duration: 6.3, delay: 3.5,  rotate: -18 },
-  { Icon: Navigation,  x: "12%",  y: "48%",  size: 20, opacity: 0.10, duration: 7.6, delay: 2.8,  rotate: 30  },
-  { Icon: Star,        x: "70%",  y: "55%",  size: 18, opacity: 0.09, duration: 8.4, delay: 1.0,  rotate: -12 },
+  { Icon: Car,         x: "8%",   y: "12%",  size: 36, opacity: 0.38, duration: 6.2, delay: 0,    rotate: -15 },
+  { Icon: MapPin,      x: "88%",  y: "8%",   size: 28, opacity: 0.30, duration: 7.5, delay: 1.2,  rotate: 10  },
+  { Icon: Navigation,  x: "75%",  y: "72%",  size: 32, opacity: 0.34, duration: 5.8, delay: 0.5,  rotate: 20  },
+  { Icon: Clock,       x: "5%",   y: "65%",  size: 26, opacity: 0.28, duration: 8.1, delay: 2.1,  rotate: -8  },
+  { Icon: Star,        x: "92%",  y: "42%",  size: 22, opacity: 0.30, duration: 6.7, delay: 1.8,  rotate: 15  },
+  { Icon: Shield,      x: "18%",  y: "80%",  size: 30, opacity: 0.26, duration: 7.2, delay: 0.8,  rotate: -20 },
+  { Icon: Zap,         x: "82%",  y: "25%",  size: 24, opacity: 0.35, duration: 5.4, delay: 3.0,  rotate: 8   },
+  { Icon: Route,       x: "3%",   y: "35%",  size: 28, opacity: 0.28, duration: 8.8, delay: 1.5,  rotate: 12  },
+  { Icon: Smartphone,  x: "65%",  y: "88%",  size: 26, opacity: 0.28, duration: 6.5, delay: 2.5,  rotate: -10 },
+  { Icon: CreditCard,  x: "25%",  y: "6%",   size: 24, opacity: 0.26, duration: 7.9, delay: 0.3,  rotate: -5  },
+  { Icon: Car,         x: "55%",  y: "15%",  size: 20, opacity: 0.22, duration: 9.0, delay: 4.0,  rotate: 25  },
+  { Icon: MapPin,      x: "40%",  y: "90%",  size: 22, opacity: 0.24, duration: 6.3, delay: 3.5,  rotate: -18 },
+  { Icon: Navigation,  x: "12%",  y: "48%",  size: 20, opacity: 0.22, duration: 7.6, delay: 2.8,  rotate: 30  },
+  { Icon: Star,        x: "70%",  y: "55%",  size: 18, opacity: 0.22, duration: 8.4, delay: 1.0,  rotate: -12 },
 ];
 
 export default function RoleSelection() {
