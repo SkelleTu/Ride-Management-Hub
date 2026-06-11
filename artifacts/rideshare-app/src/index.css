@@ -197,3 +197,18 @@
   --input: 228 13% 85%;
   --ring: 234 75% 55%;
 }
+
+/* Leaflet attribution — mantido por licença mas discreto */
+.leaflet-control-attribution {
+  opacity: 0.15 !important;
+  font-size: 9px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transition: opacity 0.2s;
+}
+.leaflet-control-attribution:hover {
+  opacity: 0.6 !important;
+}
+.leaflet-control-attribution a {
+  color: inherit !important;
+}
