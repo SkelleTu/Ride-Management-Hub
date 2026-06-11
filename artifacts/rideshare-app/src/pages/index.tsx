@@ -18,7 +18,7 @@ export default function RoleSelection() {
     <div className="min-h-[100dvh] flex flex-col items-center justify-center p-4 bg-background">
       <div className="w-full max-w-md space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="text-center space-y-2">
-          <div className="flex justify-center mb-6 drop-shadow-[0_0_20px_rgba(34,197,94,0.4)]">
+          <div className="flex justify-center mb-6 drop-shadow-[0_0_28px_rgba(107,113,245,0.5)]">
             <UPcarLogo size={64} />
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Bem-vindo ao UPcar</h1>
