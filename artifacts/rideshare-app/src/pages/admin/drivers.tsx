@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Clock, CheckCircle, XCircle, Search, Car, ChevronRight } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const STATUS_CONFIG = {
   pending: { label: "Pendente", icon: Clock, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
@@ -67,9 +68,10 @@ export default function AdminDrivers() {
                   onClick={() => setLocation(`/admin/drivers/${driver.id}`)}
                 >
                   <CardContent className="p-4 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-bold text-sm shrink-0">
-                      {driver.user?.name?.charAt(0) ?? "?"}
-                    </div>
+                    <Avatar className="shrink-0">
+                      <AvatarImage src={driver.user?.avatarUrl ?? undefined} alt={driver.user?.name ?? ""} className="object-cover" />
+                      <AvatarFallback className="bg-secondary font-bold text-sm">{driver.user?.name?.charAt(0) ?? "?"}</AvatarFallback>
+                    </Avatar>
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold truncate">{driver.user?.name ?? "—"}</div>
                       <div className="text-xs text-muted-foreground">

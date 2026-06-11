@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, Users, Star, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -54,6 +54,7 @@ export default function AdminPassengers() {
         <Card key={p.id} data-testid={`card-passenger-${p.id}`}>
           <CardContent className="p-4 flex items-center gap-3">
             <Avatar>
+              <AvatarImage src={p.avatarUrl ?? undefined} alt={p.name} className="object-cover" />
               <AvatarFallback className="bg-blue-500/20 text-blue-400 font-bold">{p.name.charAt(0)}</AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">

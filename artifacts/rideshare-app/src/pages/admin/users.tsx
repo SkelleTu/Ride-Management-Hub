@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, Trash2, Shield, Car, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -57,6 +57,7 @@ export default function AdminUsers() {
           <Card key={u.id} data-testid={`card-user-${u.id}`}>
             <CardContent className="p-4 flex items-center gap-3">
               <Avatar>
+                <AvatarImage src={u.avatarUrl ?? undefined} alt={u.name} className="object-cover" />
                 <AvatarFallback className={`font-bold ${role?.color ?? ""}`}>{u.name.charAt(0)}</AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
