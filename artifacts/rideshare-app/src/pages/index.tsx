@@ -3,10 +3,12 @@ import { useAuth } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Car, User, ArrowRight, MapPin, Navigation, Clock,
-  Star, Shield, Zap, Route, Smartphone, CreditCard,
+  Star, Shield, Zap, Route, Smartphone, CreditCard, UserPlus, MessageCircle,
 } from "lucide-react";
 import { UPcarLogo } from "@/components/ui/UPcarLogo";
 import { motion } from "framer-motion";
+
+const WHATSAPP_NUMBER = "5519997238298";
 
 const FLOATING_ICONS = [
   { Icon: Car,         x: "8%",   y: "12%",  size: 36, opacity: 0.38, duration: 6.2, delay: 0,    rotate: -15 },
@@ -32,6 +34,14 @@ export default function RoleSelection() {
   const handleSelectRole = (role: "passenger" | "driver") => {
     setSelectedRole(role);
     setLocation("/auth/login");
+  };
+
+  const handleRegister = () => {
+    setLocation("/auth/register");
+  };
+
+  const handleWhatsApp = () => {
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}`, "_blank");
   };
 
   return (
@@ -133,6 +143,44 @@ export default function RoleSelection() {
                 </div>
               </div>
               <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-accent transition-colors transform group-hover:translate-x-1" />
+            </CardContent>
+          </Card>
+
+          <Card
+            className="group cursor-pointer hover:border-emerald-500/50 transition-colors bg-card hover-elevate overflow-hidden relative"
+            onClick={handleRegister}
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <CardContent className="p-6 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-foreground group-hover:text-emerald-400 transition-colors">
+                  <UserPlus className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">Cadastrar</h3>
+                  <p className="text-sm text-muted-foreground">Criar uma nova conta</p>
+                </div>
+              </div>
+              <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-emerald-400 transition-colors transform group-hover:translate-x-1" />
+            </CardContent>
+          </Card>
+
+          <Card
+            className="group cursor-pointer hover:border-green-400/50 transition-colors bg-card hover-elevate overflow-hidden relative"
+            onClick={handleWhatsApp}
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <CardContent className="p-6 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-foreground group-hover:text-green-400 transition-colors">
+                  <MessageCircle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">Falar no WhatsApp</h3>
+                  <p className="text-sm text-muted-foreground">Entrar em contato</p>
+                </div>
+              </div>
+              <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-green-400 transition-colors transform group-hover:translate-x-1" />
             </CardContent>
           </Card>
         </div>
