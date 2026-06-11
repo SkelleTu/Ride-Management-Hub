@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { Menu, LogOut, Car, User, LayoutDashboard } from "lucide-react";
+import { Menu, LogOut, Car, User, LayoutDashboard, Map } from "lucide-react";
 import { UPcarLogo } from "@/components/ui/UPcarLogo";
 
 export function Navbar() {
@@ -21,6 +21,10 @@ export function Navbar() {
           </Link>
           <Link href="/admin/passengers" className="text-sm font-medium hover:text-primary transition-colors">
             Passageiros
+          </Link>
+          <Link href="/passenger" className="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+            <Map className="w-3.5 h-3.5" />
+            Mapa
           </Link>
         </>
       );

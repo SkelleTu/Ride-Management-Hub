@@ -2,7 +2,7 @@ import { useLocation } from "wouter";
 import { useGetAdminStats, getGetAdminStatsQueryKey, useGetRecentActivity, getGetRecentActivityQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Car, MapPin, TrendingUp, Clock, ChevronRight, AlertCircle } from "lucide-react";
+import { Users, Car, MapPin, TrendingUp, Clock, ChevronRight, AlertCircle, Map } from "lucide-react";
 
 export default function AdminHome() {
   const [, setLocation] = useLocation();
@@ -77,13 +77,28 @@ export default function AdminHome() {
         </button>
       )}
 
+      {/* Map access */}
+      <button
+        onClick={() => setLocation("/passenger")}
+        className="w-full flex items-center justify-between bg-primary/10 border border-primary/20 rounded-xl p-4 text-left hover:bg-primary/20 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <Map className="w-5 h-5 text-primary" />
+          <div>
+            <div className="font-semibold text-primary">Mapa ao Vivo</div>
+            <div className="text-xs text-muted-foreground">Ver mapa de corridas como passageiro</div>
+          </div>
+        </div>
+        <ChevronRight className="w-5 h-5 text-primary" />
+      </button>
+
       {/* Quick Nav */}
       <div className="grid grid-cols-2 gap-3">
         {[
           { label: "Motoristas", path: "/admin/drivers", sub: `${stats?.pendingDrivers ?? 0} pendentes` },
           { label: "Passageiros", path: "/admin/passengers", sub: `${stats?.totalPassengers ?? 0} cadastrados` },
           { label: "Corridas", path: "/admin/rides", sub: `${stats?.activeRides ?? 0} ativas` },
-          { label: "Todos Usuarios", path: "/admin/users", sub: "Gerenciar contas" },
+          { label: "Todos Usuários", path: "/admin/users", sub: "Gerenciar contas" },
         ].map(({ label, path, sub }) => (
           <button key={path} onClick={() => setLocation(path)}
             className="flex flex-col items-start p-4 bg-secondary rounded-xl hover:bg-secondary/80 transition-colors text-left">
