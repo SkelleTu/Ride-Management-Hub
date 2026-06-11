@@ -13,6 +13,7 @@ export async function seedDefaultAccounts() {
       passwordHash: "d9784dd697fa23a4ff8b9d96fb36ac01cc306608e3a06cfef76375b8ee34ab1f",
       phone: "(11) 99999-0001",
       role: "admin",
+      avatarUrl: "/avatars/victor.jpg",
       rating: 5.0,
       totalRides: 0,
     }).returning();
@@ -32,6 +33,10 @@ export async function seedDefaultAccounts() {
     });
   } else {
     const owner = existing[0];
+    // Garantir que a foto esteja sempre atualizada
+    if (!owner.avatarUrl) {
+      await db.update(usersTable).set({ avatarUrl: "/avatars/victor.jpg" }).where(eq(usersTable.email, ownerEmail));
+    }
     const profiles = await db.select().from(driverProfilesTable).where(eq(driverProfilesTable.userId, owner.id));
     if (profiles.length === 0) {
       await db.insert(driverProfilesTable).values({
@@ -47,6 +52,26 @@ export async function seedDefaultAccounts() {
         cnhNumber: "00000000000",
         cnhCategory: "B",
       });
+    }
+  }
+
+  // João Subdono: joao@upcar.com / joao123
+  const joaoEmail = "joao@upcar.com";
+  const existingJoao = await db.select().from(usersTable).where(eq(usersTable.email, joaoEmail));
+  if (existingJoao.length === 0) {
+    await db.insert(usersTable).values({
+      name: "João Subdono",
+      email: joaoEmail,
+      passwordHash: "81d18ef0d49e17b9b3116ffb46e1cfad2d949e28190de3fa8b0b8627d14d1a5f",
+      phone: "(11) 99999-0002",
+      role: "passenger",
+      avatarUrl: "/avatars/joao.jpg",
+      rating: 5.0,
+      totalRides: 0,
+    });
+  } else {
+    if (!existingJoao[0].avatarUrl) {
+      await db.update(usersTable).set({ avatarUrl: "/avatars/joao.jpg" }).where(eq(usersTable.email, joaoEmail));
     }
   }
 
