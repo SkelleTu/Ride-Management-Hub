@@ -23,7 +23,7 @@ offersRouter.post("/", requireAuth, async (req, res) => {
   const rideId = parseInt(String(req.params.rideId));
   const currentUser = (req as any).user;
 
-  if (currentUser.role !== "driver") {
+  if (currentUser.role !== "driver" && currentUser.role !== "admin") {
     res.status(403).json({ error: "Only drivers can make offers" }); return;
   }
 
