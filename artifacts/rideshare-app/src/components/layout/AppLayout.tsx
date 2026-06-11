@@ -5,7 +5,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="h-[100dvh] flex flex-col bg-background text-foreground">
       <Navbar />
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col">
         {children}
       </main>
     </div>

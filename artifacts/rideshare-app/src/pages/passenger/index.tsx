@@ -147,9 +147,9 @@ export default function PassengerHome() {
   };
 
   return (
-    <div className="flex-1 relative overflow-hidden">
-      {/* Map fills the entire container absolutely so Leaflet gets a concrete pixel height */}
-      <div className="absolute inset-0">
+    <>
+      {/* Map: fixed to viewport, completely free from flex/overflow constraints */}
+      <div className="fixed inset-x-0 top-16 bottom-0 z-0">
         <MapView
           origin={origin}
           destination={destination}
@@ -159,7 +159,8 @@ export default function PassengerHome() {
         />
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 bg-card border-t border-border rounded-t-2xl shadow-2xl p-4 space-y-3 z-[1000]">
+      {/* Bottom sheet: fixed on top of map */}
+      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border rounded-t-2xl shadow-2xl p-4 space-y-3 z-[1000]">
         <div className="w-10 h-1 bg-muted rounded-full mx-auto" />
         <div className="text-sm text-muted-foreground font-medium">
           Olá, {user?.name?.split(" ")[0]}! Para onde vamos?
@@ -264,6 +265,6 @@ export default function PassengerHome() {
           Toque no mapa para marcar os pontos · preço pode ser ajustado
         </div>
       </div>
-    </div>
+    </>
   );
 }
