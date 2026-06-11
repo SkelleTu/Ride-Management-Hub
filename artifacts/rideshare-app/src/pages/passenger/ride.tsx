@@ -66,9 +66,8 @@ export default function PassengerRide({ params }: { params: { id: string } }) {
       </button>
 
       {/* Status */}
-      <div className="text-center space-y-2">
+      <div className="text-center">
         <Badge className={`text-sm px-4 py-1.5 border ${statusInfo.color}`}>{statusInfo.label}</Badge>
-        <div className="text-2xl font-bold">Corrida #{ride.id}</div>
       </div>
 
       {/* Route */}
