@@ -88,7 +88,6 @@ const destinationIcon = new L.Icon({
   iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
 });
 
-// person silhouette SVG paths
 const PERSON_PATH = `<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>`;
 const CAR_PATH = `<rect x="2" y="9" width="20" height="9" rx="2"/><path d="M16 9V7a4 4 0 0 0-8 0v2"/><circle cx="7" cy="18" r="1"/><circle cx="17" cy="18" r="1"/>`;
 
@@ -103,26 +102,44 @@ export default function MapView({
   const mapInstance = useRef<L.Map | null>(null);
   const markersRef = useRef<{ origin?: L.Marker; destination?: L.Marker; driver?: L.Marker }>({});
   const polylineRef = useRef<L.Polyline | null>(null);
+  // Keep onMapClick in a ref so the map init effect never needs to re-run when the callback changes
+  const onMapClickRef = useRef(onMapClick);
+  useEffect(() => { onMapClickRef.current = onMapClick; }, [onMapClick]);
 
+  // Initialize map once — cleanup on unmount to avoid React/Leaflet DOM conflicts
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
-    mapInstance.current = L.map(mapRef.current, { zoomControl: true }).setView([-23.5505, -46.6333], 13);
+
+    const map = L.map(mapRef.current, { zoomControl: true }).setView([-23.5505, -46.6333], 13);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
       subdomains: 'abcd', maxZoom: 20
-    }).addTo(mapInstance.current);
-    if (onMapClick) {
-      mapInstance.current.on('click', (e: L.LeafletMouseEvent) => onMapClick(e.latlng.lat, e.latlng.lng));
-    }
-    setTimeout(() => mapInstance.current?.invalidateSize(), 100);
-  }, [onMapClick]);
+    }).addTo(map);
+
+    map.on('click', (e: L.LeafletMouseEvent) => {
+      onMapClickRef.current?.(e.latlng.lat, e.latlng.lng);
+    });
+
+    mapInstance.current = map;
+    setTimeout(() => map.invalidateSize(), 100);
+
+    return () => {
+      // Clean up all markers and layers before removing map
+      try { Object.values(markersRef.current).forEach(m => m?.remove()); } catch {}
+      markersRef.current = {};
+      try { polylineRef.current?.remove(); } catch {}
+      polylineRef.current = null;
+      try { map.remove(); } catch {}
+      mapInstance.current = null;
+    };
+  }, []);
 
   // Origin (passenger) marker
   useEffect(() => {
     if (!mapInstance.current) return;
     if (!origin) {
       if (markersRef.current.origin) {
-        mapInstance.current.removeLayer(markersRef.current.origin);
+        try { mapInstance.current.removeLayer(markersRef.current.origin); } catch {}
         delete markersRef.current.origin;
       }
       return;
@@ -145,7 +162,7 @@ export default function MapView({
     if (!mapInstance.current) return;
     if (!destination) {
       if (markersRef.current.destination) {
-        mapInstance.current.removeLayer(markersRef.current.destination);
+        try { mapInstance.current.removeLayer(markersRef.current.destination); } catch {}
         delete markersRef.current.destination;
       }
       return;
@@ -177,7 +194,7 @@ export default function MapView({
     if (!mapInstance.current) return;
     if (!driverPosition) {
       if (markersRef.current.driver) {
-        mapInstance.current.removeLayer(markersRef.current.driver);
+        try { mapInstance.current.removeLayer(markersRef.current.driver); } catch {}
         delete markersRef.current.driver;
       }
       return;
@@ -198,7 +215,10 @@ export default function MapView({
   // Polyline
   useEffect(() => {
     if (!mapInstance.current) return;
-    if (polylineRef.current) { mapInstance.current.removeLayer(polylineRef.current); polylineRef.current = null; }
+    if (polylineRef.current) {
+      try { mapInstance.current.removeLayer(polylineRef.current); } catch {}
+      polylineRef.current = null;
+    }
     if (routePoints && routePoints.length > 1) {
       polylineRef.current = L.polyline(routePoints, {
         color: '#22c55e', weight: 4, opacity: 0.85, lineCap: 'round', lineJoin: 'round',
