@@ -7,7 +7,7 @@ import { getListRidesQueryKey } from "@workspace/api-client-react";
 import MapView from "@/components/map/MapView";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronRight, Navigation, Loader2, Route, Hash } from "lucide-react";
+import { ChevronRight, Navigation, Loader2, Route, Hash, LocateFixed } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const PRICE_PER_KM = 2;
@@ -64,7 +64,35 @@ export default function PassengerHome() {
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [routePoints, setRoutePoints] = useState<[number, number][]>([]);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        try {
+          const r = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=pt-BR`
+          );
+          const data = await r.json();
+          const addr = data.display_name ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+          const shortName = addr.split(",")[0];
+          setOrigin({ address: addr, lat, lng });
+          setOriginQuery(shortName);
+        } catch {
+          setOrigin({ address: `${lat.toFixed(5)}, ${lng.toFixed(5)}`, lat, lng });
+          setOriginQuery(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      () => setIsLocating(false),
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }, []);
 
   const createRide = useCreateRide();
 
@@ -195,19 +223,27 @@ export default function PassengerHome() {
         {/* Origin */}
         <div className="space-y-1.5">
           <div className="relative">
-            <div className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2.5 border border-border focus-within:border-primary transition-colors">
-              <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
+            <div className={`flex items-center gap-2 bg-secondary rounded-xl px-3 py-2.5 border transition-colors ${isLocating ? "border-primary/50" : "border-border focus-within:border-primary"}`}>
+              {isLocating ? (
+                <LocateFixed className="w-3.5 h-3.5 text-primary shrink-0 animate-pulse" />
+              ) : (
+                <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
+              )}
               <Input
                 data-testid="input-origin"
-                placeholder="De onde?"
+                placeholder={isLocating ? "Detectando sua localização..." : "De onde?"}
                 value={originQuery}
+                disabled={isLocating}
                 onChange={(e) => {
                   setOriginQuery(e.target.value);
                   setOrigin(null);
                   searchAddress(e.target.value, "origin");
                 }}
-                className="border-none bg-transparent p-0 h-auto text-sm focus-visible:ring-0"
+                className="border-none bg-transparent p-0 h-auto text-sm focus-visible:ring-0 disabled:opacity-60 disabled:cursor-wait"
               />
+              {isLocating && (
+                <Loader2 className="w-3.5 h-3.5 text-primary shrink-0 animate-spin" />
+              )}
             </div>
             {originSuggestions.length > 0 && (
               <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
