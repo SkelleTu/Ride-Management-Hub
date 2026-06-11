@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "RideApp - InDrive Clone"
+version = "1.0.0"
+id = "artifacts/rideshare-app"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20091
+
+[services.development]
+run = "pnpm --filter @workspace/rideshare-app run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/rideshare-app", "run", "build" ]
+publicDir = "artifacts/rideshare-app/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20091"
+BASE_PATH = "/"
