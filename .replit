@@ -1,4 +1,4 @@
-modules = ["nodejs-24", "postgresql-16"]
+modules = ["nodejs-20", "web", "bash"]
 
 [deployment]
 router = "application"
@@ -87,3 +87,4 @@ channel = "stable-25_05"
 
 [userenv.shared]
 PORT = "5000"
+JWT_SECRET = "89373cf6b61e70ad5c7887e7249d788af517b28c2a5acc8f17fc9f6fe259fc15"
