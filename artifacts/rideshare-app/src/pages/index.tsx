@@ -19,7 +19,7 @@ export default function RoleSelection() {
       <div className="w-full max-w-md space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="text-center space-y-2">
           <div className="flex justify-center mb-6 drop-shadow-[0_0_28px_rgba(107,113,245,0.5)]">
-            <UPcarLogo size={64} />
+            <UPcarLogo size={140} />
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Bem-vindo ao UPcar</h1>
           <p className="text-muted-foreground">Como você deseja usar o app hoje?</p>
