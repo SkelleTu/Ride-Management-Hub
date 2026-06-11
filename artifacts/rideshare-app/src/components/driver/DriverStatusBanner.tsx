@@ -4,7 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Clock, XCircle, CheckCircle, FileText, ChevronRight } from "lucide-react";
 
 async function fetchMyDriverProfile() {
-  const r = await fetch("/api/drivers/me", { credentials: "include" });
+  const token = localStorage.getItem("token");
+  const r = await fetch("/api/drivers/me", {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
   if (r.status === 404) return null;
   if (!r.ok) return null;
   return r.json();

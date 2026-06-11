@@ -1,12 +1,22 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useGetActiveRides, getGetActiveRidesQueryKey } from "@workspace/api-client-react";
-import { useGetDriverProfile, getGetDriverProfileQueryKey } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Navigation, Clock, ChevronRight, Car, Lock } from "lucide-react";
 import { DriverStatusBanner } from "@/components/driver/DriverStatusBanner";
+
+async function fetchMyDriverProfile() {
+  const token = localStorage.getItem("token");
+  const r = await fetch("/api/drivers/me", {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (r.status === 404) return null;
+  if (!r.ok) return null;
+  return r.json();
+}
 
 export default function DriverHome() {
   const { user } = useAuth();
@@ -15,8 +25,10 @@ export default function DriverHome() {
   const { data: rides = [], isLoading, refetch } = useGetActiveRides({
     query: { queryKey: getGetActiveRidesQueryKey(), refetchInterval: 10000 }
   });
-  const { data: profile } = useGetDriverProfile(user?.id ?? 0, {
-    query: { enabled: !!user?.id, queryKey: getGetDriverProfileQueryKey(user?.id ?? 0) }
+  const { data: profile } = useQuery({
+    queryKey: ["driver-profile-me", user?.id],
+    queryFn: fetchMyDriverProfile,
+    enabled: !!user?.id,
   });
 
   const isApproved = profile?.status === "approved";

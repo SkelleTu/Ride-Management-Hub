@@ -3,8 +3,13 @@ import { useAuth } from "@/lib/auth";
 import { useCreateDriverProfile } from "@workspace/api-client-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
+const DRIVER_PROFILE_ME_KEY = (userId?: number) => ["driver-profile-me", userId];
+
 async function fetchMyDriverProfile() {
-  const r = await fetch("/api/drivers/me", { credentials: "include" });
+  const token = localStorage.getItem("token");
+  const r = await fetch("/api/drivers/me", {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
   if (r.status === 404) return null;
   if (!r.ok) return null;
   return r.json();
@@ -57,7 +62,7 @@ export default function DriverProfile() {
     }
     createProfile.mutate({ data: { ...formData, vehicleYear: parseInt(formData.vehicleYear) } as any }, {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getGetDriverProfileQueryKey(user?.id ?? 0) });
+        queryClient.invalidateQueries({ queryKey: DRIVER_PROFILE_ME_KEY(user?.id) });
         toast({ title: "Documentação enviada! Aguarde a aprovação." });
       },
       onError: () => toast({ title: "Erro ao enviar documentação", variant: "destructive" }),
@@ -104,7 +109,7 @@ export default function DriverProfile() {
         </div>
 
         {profile.status === "denied" && (
-          <Button onClick={() => queryClient.setQueryData(getGetDriverProfileQueryKey(user?.id ?? 0), null)} variant="outline" className="w-full">
+          <Button onClick={() => queryClient.setQueryData(DRIVER_PROFILE_ME_KEY(user?.id), null)} variant="outline" className="w-full">
             Reenviar Documentação
           </Button>
         )}
