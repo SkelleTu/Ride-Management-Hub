@@ -220,7 +220,11 @@ export default function DriverRide({ params }: { params: { id: string } }) {
       {/* Map */}
       <div className="h-52 shrink-0">
         <MapView
-          origin={{ lat: ride.originLat, lng: ride.originLng }}
+          origin={
+            (ride as any).passengerLat && (ride as any).passengerLng
+              ? { lat: (ride as any).passengerLat, lng: (ride as any).passengerLng }
+              : { lat: ride.originLat, lng: ride.originLng }
+          }
           destination={ride.status === "in_progress" ? { lat: ride.destinationLat, lng: ride.destinationLng } : null}
           driverPosition={driverPos}
           className="h-full w-full"

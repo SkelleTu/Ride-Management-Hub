@@ -23,6 +23,8 @@ export const ridesTable = pgTable("rides", {
   cancelReason: text("cancel_reason"),
   driverLat: real("driver_lat"),
   driverLng: real("driver_lng"),
+  passengerLat: real("passenger_lat"),
+  passengerLng: real("passenger_lng"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

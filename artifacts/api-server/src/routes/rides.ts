@@ -152,6 +152,21 @@ ridesRouter.patch("/:id/location", requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Passenger broadcasts their GPS position
+ridesRouter.patch("/:id/passenger-location", requireAuth, async (req, res) => {
+  const id = parseInt(String(req.params.id));
+  const { lat, lng } = req.body ?? {};
+  if (typeof lat !== "number" || typeof lng !== "number") {
+    res.status(400).json({ error: "lat and lng required" }); return;
+  }
+  const [updated] = await db.update(ridesTable)
+    .set({ passengerLat: lat, passengerLng: lng })
+    .where(eq(ridesTable.id, id))
+    .returning();
+  if (!updated) { res.status(404).json({ error: "Ride not found" }); return; }
+  res.json({ ok: true });
+});
+
 // Get messages for a ride
 ridesRouter.get("/:id/messages", requireAuth, async (req, res) => {
   const id = parseInt(String(req.params.id));

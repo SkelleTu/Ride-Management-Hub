@@ -82,6 +82,32 @@ export default function PassengerRide({ params }: { params: { id: string } }) {
 
   const isConnected = ride?.status === "accepted" || ride?.status === "in_progress";
 
+  // Passenger broadcasts GPS every 6s when ride is active
+  useEffect(() => {
+    if (!isConnected || !navigator.geolocation) return;
+    let active = true;
+    const broadcast = () => {
+      if (!active) return;
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (!active) return;
+          const { latitude: lat, longitude: lng } = pos.coords;
+          const token = localStorage.getItem("token");
+          fetch(`/api/rides/${id}/passenger-location`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+            body: JSON.stringify({ lat, lng }),
+          }).catch(() => {});
+        },
+        () => {},
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    };
+    broadcast();
+    const interval = setInterval(broadcast, 6000);
+    return () => { active = false; clearInterval(interval); };
+  }, [id, isConnected]);
+
   // Poll messages every 3s when chat open
   useEffect(() => {
     const load = async () => {
