@@ -73,24 +73,30 @@ export default function PassengerHome() {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
+        // Plot marker and center map immediately with raw coordinates
+        const coordLabel = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        setOrigin({ address: coordLabel, lat, lng });
+        setOriginQuery(coordLabel);
+        setIsLocating(false);
+        // Then try to resolve actual street address in the background
         try {
           const r = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=pt-BR`
+            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
           );
-          const data = await r.json();
-          const addr = data.display_name ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-          const shortName = addr.split(",")[0];
-          setOrigin({ address: addr, lat, lng });
-          setOriginQuery(shortName);
+          if (r.ok) {
+            const data = await r.json();
+            if (data?.display_name) {
+              const shortName = data.display_name.split(",")[0];
+              setOrigin({ address: data.display_name, lat, lng });
+              setOriginQuery(shortName);
+            }
+          }
         } catch {
-          setOrigin({ address: `${lat.toFixed(5)}, ${lng.toFixed(5)}`, lat, lng });
-          setOriginQuery(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
-        } finally {
-          setIsLocating(false);
+          // keep coordinates as address fallback
         }
       },
       () => setIsLocating(false),
-      { enableHighAccuracy: true, timeout: 8000 }
+      { enableHighAccuracy: true, timeout: 10000 }
     );
   }, []);
 
