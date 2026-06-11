@@ -691,6 +691,28 @@ export const CreateRideBody = zod.object({
 
 
 /**
+ * @summary Get 30-min time slots with available driver counts for a given date/duration
+ */
+export const GetRideAvailabilityQueryParams = zod.object({
+  "date": zod.coerce.string(),
+  "duration": zod.coerce.number().optional()
+})
+
+export const GetRideAvailabilityResponse = zod.object({
+  "date": zod.string(),
+  "duration": zod.number(),
+  "totalDrivers": zod.number(),
+  "slots": zod.array(zod.object({
+  "time": zod.string().describe('HH:MM format'),
+  "datetime": zod.coerce.date(),
+  "available": zod.boolean(),
+  "driverCount": zod.number(),
+  "totalDrivers": zod.number()
+}))
+})
+
+
+/**
  * @summary Get open/active ride requests (for drivers browsing)
  */
 export const GetActiveRidesResponseItem = zod.object({
@@ -2172,5 +2194,329 @@ export const GetAdminScheduledRidesResponseItem = zod.object({
   "createdAt": zod.coerce.date()
 })
 export const GetAdminScheduledRidesResponse = zod.array(GetAdminScheduledRidesResponseItem)
+
+
+/**
+ * @summary Cancel a scheduled ride (admin)
+ */
+export const AdminCancelScheduledRideParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminCancelScheduledRideBody = zod.object({
+  "reason": zod.string().nullish()
+})
+
+export const AdminCancelScheduledRideResponse = zod.object({
+  "id": zod.number(),
+  "passengerId": zod.number(),
+  "driverId": zod.number().nullish(),
+  "originAddress": zod.string(),
+  "originLat": zod.number(),
+  "originLng": zod.number(),
+  "destinationAddress": zod.string(),
+  "destinationLat": zod.number(),
+  "destinationLng": zod.number(),
+  "offeredPrice": zod.number(),
+  "agreedPrice": zod.number().nullish(),
+  "status": zod.enum(['open', 'negotiating', 'accepted', 'in_progress', 'completed', 'cancelled']),
+  "estimatedDistance": zod.number().nullish(),
+  "estimatedDuration": zod.number().nullish(),
+  "startedAt": zod.string().nullish(),
+  "completedAt": zod.string().nullish(),
+  "cancelReason": zod.string().nullish(),
+  "isScheduled": zod.boolean(),
+  "scheduledFor": zod.coerce.date().nullish(),
+  "schedulingType": zod.union([zod.literal('public'),zod.literal('directed'),zod.literal(null)]).nullish(),
+  "directedToDriverId": zod.number().nullish(),
+  "scheduledStatus": zod.union([zod.literal('pending_acceptance'),zod.literal('confirmed'),zod.literal('driver_declined'),zod.literal('cancelled'),zod.literal(null)]).nullish(),
+  "scheduledNote": zod.string().nullish(),
+  "passenger": zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "role": zod.enum(['passenger', 'driver', 'admin']),
+  "avatarUrl": zod.string().nullish(),
+  "rating": zod.number().nullish(),
+  "totalRides": zod.number().optional(),
+  "createdAt": zod.coerce.date(),
+  "driverProfile": zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "status": zod.enum(['pending', 'approved', 'denied']),
+  "cpf": zod.string().nullish(),
+  "birthDate": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "state": zod.string().nullish(),
+  "cnhNumber": zod.string().nullish(),
+  "cnhCategory": zod.string().nullish(),
+  "cnhExpiry": zod.string().nullish(),
+  "vehicleMake": zod.string().nullish(),
+  "vehicleModel": zod.string().nullish(),
+  "vehicleYear": zod.number().nullish(),
+  "vehicleColor": zod.string().nullish(),
+  "vehiclePlate": zod.string().nullish(),
+  "vehicleType": zod.union([zod.literal('sedan'),zod.literal('suv'),zod.literal('hatch'),zod.literal('pickup'),zod.literal('moto'),zod.literal('van'),zod.literal(null)]).nullish(),
+  "photoUrl": zod.string().nullish(),
+  "cnhPhotoUrl": zod.string().nullish(),
+  "vehiclePhotoUrl": zod.string().nullish(),
+  "criminalRecordUrl": zod.string().nullish(),
+  "adminNote": zod.string().nullish(),
+  "reviewedAt": zod.string().nullish(),
+  "user": zod.unknown().optional(),
+  "createdAt": zod.coerce.date()
+}).optional()
+}).optional(),
+  "driver": zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "role": zod.enum(['passenger', 'driver', 'admin']),
+  "avatarUrl": zod.string().nullish(),
+  "rating": zod.number().nullish(),
+  "totalRides": zod.number().optional(),
+  "createdAt": zod.coerce.date(),
+  "driverProfile": zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "status": zod.enum(['pending', 'approved', 'denied']),
+  "cpf": zod.string().nullish(),
+  "birthDate": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "state": zod.string().nullish(),
+  "cnhNumber": zod.string().nullish(),
+  "cnhCategory": zod.string().nullish(),
+  "cnhExpiry": zod.string().nullish(),
+  "vehicleMake": zod.string().nullish(),
+  "vehicleModel": zod.string().nullish(),
+  "vehicleYear": zod.number().nullish(),
+  "vehicleColor": zod.string().nullish(),
+  "vehiclePlate": zod.string().nullish(),
+  "vehicleType": zod.union([zod.literal('sedan'),zod.literal('suv'),zod.literal('hatch'),zod.literal('pickup'),zod.literal('moto'),zod.literal('van'),zod.literal(null)]).nullish(),
+  "photoUrl": zod.string().nullish(),
+  "cnhPhotoUrl": zod.string().nullish(),
+  "vehiclePhotoUrl": zod.string().nullish(),
+  "criminalRecordUrl": zod.string().nullish(),
+  "adminNote": zod.string().nullish(),
+  "reviewedAt": zod.string().nullish(),
+  "user": zod.unknown().optional(),
+  "createdAt": zod.coerce.date()
+}).optional()
+}).optional(),
+  "offers": zod.array(zod.object({
+  "id": zod.number(),
+  "rideId": zod.number(),
+  "driverId": zod.number(),
+  "price": zod.number(),
+  "message": zod.string().nullish(),
+  "status": zod.enum(['pending', 'accepted', 'rejected']),
+  "driver": zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "role": zod.enum(['passenger', 'driver', 'admin']),
+  "avatarUrl": zod.string().nullish(),
+  "rating": zod.number().nullish(),
+  "totalRides": zod.number().optional(),
+  "createdAt": zod.coerce.date(),
+  "driverProfile": zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "status": zod.enum(['pending', 'approved', 'denied']),
+  "cpf": zod.string().nullish(),
+  "birthDate": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "state": zod.string().nullish(),
+  "cnhNumber": zod.string().nullish(),
+  "cnhCategory": zod.string().nullish(),
+  "cnhExpiry": zod.string().nullish(),
+  "vehicleMake": zod.string().nullish(),
+  "vehicleModel": zod.string().nullish(),
+  "vehicleYear": zod.number().nullish(),
+  "vehicleColor": zod.string().nullish(),
+  "vehiclePlate": zod.string().nullish(),
+  "vehicleType": zod.union([zod.literal('sedan'),zod.literal('suv'),zod.literal('hatch'),zod.literal('pickup'),zod.literal('moto'),zod.literal('van'),zod.literal(null)]).nullish(),
+  "photoUrl": zod.string().nullish(),
+  "cnhPhotoUrl": zod.string().nullish(),
+  "vehiclePhotoUrl": zod.string().nullish(),
+  "criminalRecordUrl": zod.string().nullish(),
+  "adminNote": zod.string().nullish(),
+  "reviewedAt": zod.string().nullish(),
+  "user": zod.unknown().optional(),
+  "createdAt": zod.coerce.date()
+}).optional()
+}).optional(),
+  "createdAt": zod.coerce.date()
+})).optional(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Reassign a scheduled ride to a different driver (admin)
+ */
+export const AdminReassignScheduledRideParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminReassignScheduledRideBody = zod.object({
+  "driverId": zod.number()
+})
+
+export const AdminReassignScheduledRideResponse = zod.object({
+  "id": zod.number(),
+  "passengerId": zod.number(),
+  "driverId": zod.number().nullish(),
+  "originAddress": zod.string(),
+  "originLat": zod.number(),
+  "originLng": zod.number(),
+  "destinationAddress": zod.string(),
+  "destinationLat": zod.number(),
+  "destinationLng": zod.number(),
+  "offeredPrice": zod.number(),
+  "agreedPrice": zod.number().nullish(),
+  "status": zod.enum(['open', 'negotiating', 'accepted', 'in_progress', 'completed', 'cancelled']),
+  "estimatedDistance": zod.number().nullish(),
+  "estimatedDuration": zod.number().nullish(),
+  "startedAt": zod.string().nullish(),
+  "completedAt": zod.string().nullish(),
+  "cancelReason": zod.string().nullish(),
+  "isScheduled": zod.boolean(),
+  "scheduledFor": zod.coerce.date().nullish(),
+  "schedulingType": zod.union([zod.literal('public'),zod.literal('directed'),zod.literal(null)]).nullish(),
+  "directedToDriverId": zod.number().nullish(),
+  "scheduledStatus": zod.union([zod.literal('pending_acceptance'),zod.literal('confirmed'),zod.literal('driver_declined'),zod.literal('cancelled'),zod.literal(null)]).nullish(),
+  "scheduledNote": zod.string().nullish(),
+  "passenger": zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "role": zod.enum(['passenger', 'driver', 'admin']),
+  "avatarUrl": zod.string().nullish(),
+  "rating": zod.number().nullish(),
+  "totalRides": zod.number().optional(),
+  "createdAt": zod.coerce.date(),
+  "driverProfile": zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "status": zod.enum(['pending', 'approved', 'denied']),
+  "cpf": zod.string().nullish(),
+  "birthDate": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "state": zod.string().nullish(),
+  "cnhNumber": zod.string().nullish(),
+  "cnhCategory": zod.string().nullish(),
+  "cnhExpiry": zod.string().nullish(),
+  "vehicleMake": zod.string().nullish(),
+  "vehicleModel": zod.string().nullish(),
+  "vehicleYear": zod.number().nullish(),
+  "vehicleColor": zod.string().nullish(),
+  "vehiclePlate": zod.string().nullish(),
+  "vehicleType": zod.union([zod.literal('sedan'),zod.literal('suv'),zod.literal('hatch'),zod.literal('pickup'),zod.literal('moto'),zod.literal('van'),zod.literal(null)]).nullish(),
+  "photoUrl": zod.string().nullish(),
+  "cnhPhotoUrl": zod.string().nullish(),
+  "vehiclePhotoUrl": zod.string().nullish(),
+  "criminalRecordUrl": zod.string().nullish(),
+  "adminNote": zod.string().nullish(),
+  "reviewedAt": zod.string().nullish(),
+  "user": zod.unknown().optional(),
+  "createdAt": zod.coerce.date()
+}).optional()
+}).optional(),
+  "driver": zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "role": zod.enum(['passenger', 'driver', 'admin']),
+  "avatarUrl": zod.string().nullish(),
+  "rating": zod.number().nullish(),
+  "totalRides": zod.number().optional(),
+  "createdAt": zod.coerce.date(),
+  "driverProfile": zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "status": zod.enum(['pending', 'approved', 'denied']),
+  "cpf": zod.string().nullish(),
+  "birthDate": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "state": zod.string().nullish(),
+  "cnhNumber": zod.string().nullish(),
+  "cnhCategory": zod.string().nullish(),
+  "cnhExpiry": zod.string().nullish(),
+  "vehicleMake": zod.string().nullish(),
+  "vehicleModel": zod.string().nullish(),
+  "vehicleYear": zod.number().nullish(),
+  "vehicleColor": zod.string().nullish(),
+  "vehiclePlate": zod.string().nullish(),
+  "vehicleType": zod.union([zod.literal('sedan'),zod.literal('suv'),zod.literal('hatch'),zod.literal('pickup'),zod.literal('moto'),zod.literal('van'),zod.literal(null)]).nullish(),
+  "photoUrl": zod.string().nullish(),
+  "cnhPhotoUrl": zod.string().nullish(),
+  "vehiclePhotoUrl": zod.string().nullish(),
+  "criminalRecordUrl": zod.string().nullish(),
+  "adminNote": zod.string().nullish(),
+  "reviewedAt": zod.string().nullish(),
+  "user": zod.unknown().optional(),
+  "createdAt": zod.coerce.date()
+}).optional()
+}).optional(),
+  "offers": zod.array(zod.object({
+  "id": zod.number(),
+  "rideId": zod.number(),
+  "driverId": zod.number(),
+  "price": zod.number(),
+  "message": zod.string().nullish(),
+  "status": zod.enum(['pending', 'accepted', 'rejected']),
+  "driver": zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "role": zod.enum(['passenger', 'driver', 'admin']),
+  "avatarUrl": zod.string().nullish(),
+  "rating": zod.number().nullish(),
+  "totalRides": zod.number().optional(),
+  "createdAt": zod.coerce.date(),
+  "driverProfile": zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "status": zod.enum(['pending', 'approved', 'denied']),
+  "cpf": zod.string().nullish(),
+  "birthDate": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "state": zod.string().nullish(),
+  "cnhNumber": zod.string().nullish(),
+  "cnhCategory": zod.string().nullish(),
+  "cnhExpiry": zod.string().nullish(),
+  "vehicleMake": zod.string().nullish(),
+  "vehicleModel": zod.string().nullish(),
+  "vehicleYear": zod.number().nullish(),
+  "vehicleColor": zod.string().nullish(),
+  "vehiclePlate": zod.string().nullish(),
+  "vehicleType": zod.union([zod.literal('sedan'),zod.literal('suv'),zod.literal('hatch'),zod.literal('pickup'),zod.literal('moto'),zod.literal('van'),zod.literal(null)]).nullish(),
+  "photoUrl": zod.string().nullish(),
+  "cnhPhotoUrl": zod.string().nullish(),
+  "vehiclePhotoUrl": zod.string().nullish(),
+  "criminalRecordUrl": zod.string().nullish(),
+  "adminNote": zod.string().nullish(),
+  "reviewedAt": zod.string().nullish(),
+  "user": zod.unknown().optional(),
+  "createdAt": zod.coerce.date()
+}).optional()
+}).optional(),
+  "createdAt": zod.coerce.date()
+})).optional(),
+  "createdAt": zod.coerce.date()
+})
 
 

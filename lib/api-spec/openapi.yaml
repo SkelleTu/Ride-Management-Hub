@@ -381,6 +381,38 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /rides/availability:
+    get:
+      operationId: getRideAvailability
+      tags: [rides]
+      summary: Get 30-min time slots with available driver counts for a given date/duration
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            description: "Date in YYYY-MM-DD format"
+        - name: duration
+          in: query
+          required: false
+          schema:
+            type: integer
+            description: "Estimated trip duration in minutes (default: 60)"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvailabilityResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /rides/active:
     get:
       operationId: getActiveRides
@@ -683,6 +715,68 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Ride"
+
+  /admin/scheduled-rides/{id}/cancel:
+    patch:
+      operationId: adminCancelScheduledRide
+      tags: [admin]
+      summary: Cancel a scheduled ride (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCancelInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ride"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/scheduled-rides/{id}/reassign:
+    patch:
+      operationId: adminReassignScheduledRide
+      tags: [admin]
+      summary: Reassign a scheduled ride to a different driver (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminReassignInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ride"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
   schemas:
@@ -1000,6 +1094,51 @@ components:
       properties:
         reason:
           type: ["string", "null"]
+
+    AdminCancelInput:
+      type: object
+      properties:
+        reason:
+          type: ["string", "null"]
+
+    AdminReassignInput:
+      type: object
+      required: [driverId]
+      properties:
+        driverId:
+          type: integer
+
+    AvailabilitySlot:
+      type: object
+      required: [time, datetime, available, driverCount, totalDrivers]
+      properties:
+        time:
+          type: string
+          description: "HH:MM format"
+        datetime:
+          type: string
+          format: date-time
+        available:
+          type: boolean
+        driverCount:
+          type: integer
+        totalDrivers:
+          type: integer
+
+    AvailabilityResponse:
+      type: object
+      required: [date, duration, totalDrivers, slots]
+      properties:
+        date:
+          type: string
+        duration:
+          type: integer
+        totalDrivers:
+          type: integer
+        slots:
+          type: array
+          items:
+            $ref: "#/components/schemas/AvailabilitySlot"
 
     # ── OFFER ───────────────────────────────────────────────────────────────
     Offer:

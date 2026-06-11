@@ -7,7 +7,7 @@ import { getListRidesQueryKey } from "@workspace/api-client-react";
 import MapView from "@/components/map/MapView";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronRight, Navigation, Loader2, Route, Hash, LocateFixed, Calendar, Clock, Radio, User2, FileText, Globe } from "lucide-react";
+import { ChevronRight, Navigation, Loader2, Route, Hash, LocateFixed, Calendar, Clock, Radio, User2, FileText, Globe, AlertCircle, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const PRICE_PER_KM = 2;
@@ -96,6 +96,11 @@ export default function PassengerHome() {
   const [scheduledNote, setScheduledNote] = useState("");
   const driverDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── Availability state ─────────────────────────────────────────────────
+  const [availability, setAvailability] = useState<{ driverCount: number; totalDrivers: number } | null>(null);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const availabilityRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // On mount: redirect to active NON-SCHEDULED ride if passenger already has one
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -138,6 +143,42 @@ export default function PassengerHome() {
       { enableHighAccuracy: true, timeout: 10000 }
     );
   }, []);
+
+  // Fetch availability when scheduledFor or duration changes
+  useEffect(() => {
+    if (!isScheduling || !scheduledFor) {
+      setAvailability(null);
+      return;
+    }
+    if (availabilityRef.current) clearTimeout(availabilityRef.current);
+    availabilityRef.current = setTimeout(async () => {
+      const date = scheduledFor.split("T")[0];
+      const duration = durationSeconds ? Math.round(durationSeconds / 60) : 60;
+      setAvailabilityLoading(true);
+      try {
+        const token = localStorage.getItem("token");
+        const r = await fetch(`/api/rides/availability?date=${date}&duration=${duration}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!r.ok) return;
+        const data = await r.json();
+        const selectedTime = scheduledFor.split("T")[1]?.slice(0, 5) ?? "00:00";
+        const [sh, sm] = selectedTime.split(":").map(Number);
+        const selMin = sh * 60 + sm;
+        let nearest = data.slots?.[0];
+        let minDiff = Infinity;
+        for (const slot of (data.slots ?? [])) {
+          const [h, m] = (slot.time as string).split(":").map(Number);
+          const diff = Math.abs(h * 60 + m - selMin);
+          if (diff < minDiff) { minDiff = diff; nearest = slot; }
+        }
+        setAvailability(nearest
+          ? { driverCount: nearest.driverCount as number, totalDrivers: nearest.totalDrivers as number }
+          : { driverCount: data.totalDrivers ?? 0, totalDrivers: data.totalDrivers ?? 0 }
+        );
+      } catch {} finally { setAvailabilityLoading(false); }
+    }, 600);
+  }, [scheduledFor, durationSeconds, isScheduling]);
 
   const createRide = useCreateRide();
 
@@ -495,6 +536,26 @@ export default function PassengerHome() {
                     className="flex-1 bg-transparent text-sm outline-none text-foreground [color-scheme:dark]"
                   />
                 </div>
+                {/* Availability badge */}
+                {scheduledFor && (
+                  <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium ${
+                    availabilityLoading
+                      ? "bg-secondary text-muted-foreground"
+                      : availability?.driverCount === 0
+                        ? "bg-destructive/10 text-destructive border border-destructive/20"
+                        : availability
+                          ? "bg-green-500/10 text-green-400 border border-green-500/20"
+                          : "bg-secondary text-muted-foreground"
+                  }`}>
+                    {availabilityLoading ? (
+                      <><Loader2 className="w-3 h-3 animate-spin" />Verificando disponibilidade...</>
+                    ) : availability?.driverCount === 0 ? (
+                      <><AlertCircle className="w-3 h-3" />Nenhum motorista disponível nesse horário</>
+                    ) : availability ? (
+                      <><CheckCircle className="w-3 h-3" />{availability.driverCount} de {availability.totalDrivers} motorista{availability.totalDrivers !== 1 ? "s" : ""} disponível{availability.driverCount !== 1 ? "is" : ""}</>
+                    ) : null}
+                  </div>
+                )}
               </div>
 
               {/* Scheduling type */}
@@ -658,7 +719,10 @@ export default function PassengerHome() {
           <Button
             data-testid="button-request-ride"
             onClick={handleSubmit}
-            disabled={!origin || !destination || !offeredPrice || createRide.isPending || isCalculating}
+            disabled={
+              !origin || !destination || !offeredPrice || createRide.isPending || isCalculating ||
+              (isScheduling && availability?.driverCount === 0 && !availabilityLoading)
+            }
             className="w-full h-12 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl"
           >
             {createRide.isPending

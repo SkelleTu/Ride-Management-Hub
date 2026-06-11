@@ -8,8 +8,12 @@
 
 export * from './activityItem';
 export * from './activityItemType';
+export * from './adminCancelInput';
+export * from './adminReassignInput';
 export * from './adminStats';
 export * from './authResponse';
+export * from './availabilityResponse';
+export * from './availabilitySlot';
 export * from './driverDecisionInput';
 export * from './driverProfile';
 export * from './driverProfileInput';
@@ -20,6 +24,7 @@ export * from './errorResponse';
 export * from './getAdminScheduledRidesParams';
 export * from './getAdminScheduledRidesScheduledStatus';
 export * from './getAdminScheduledRidesSchedulingType';
+export * from './getRideAvailabilityParams';
 export * from './healthStatus';
 export * from './listDriversParams';
 export * from './listDriversStatus';

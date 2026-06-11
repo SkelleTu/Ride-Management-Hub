@@ -76,6 +76,21 @@ adminRouter.get("/scheduled-rides", requireAdmin, async (req, res) => {
   res.json(result);
 });
 
+adminRouter.patch("/scheduled-rides/:id/cancel", requireAdmin, async (req, res) => {
+  const id = parseInt(String(req.params.id));
+  const { reason } = req.body ?? {};
+  const [updated] = await db.update(ridesTable)
+    .set({
+      status: "cancelled",
+      scheduledStatus: "cancelled",
+      cancelReason: reason ?? "Cancelado pelo administrador",
+    })
+    .where(and(eq(ridesTable.id, id), eq(ridesTable.isScheduled, true)))
+    .returning();
+  if (!updated) { res.status(404).json({ error: "Scheduled ride not found" }); return; }
+  res.json(updated);
+});
+
 adminRouter.patch("/scheduled-rides/:id/reassign", requireAdmin, async (req, res) => {
   const id = parseInt(String(req.params.id));
   const { driverId } = req.body ?? {};

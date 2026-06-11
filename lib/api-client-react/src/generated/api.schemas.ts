@@ -339,6 +339,31 @@ export interface ScheduledRideDeclineInput {
   reason?: string | null;
 }
 
+export interface AdminCancelInput {
+  /** @nullable */
+  reason?: string | null;
+}
+
+export interface AdminReassignInput {
+  driverId: number;
+}
+
+export interface AvailabilitySlot {
+  /** HH:MM format */
+  time: string;
+  datetime: string;
+  available: boolean;
+  driverCount: number;
+  totalDrivers: number;
+}
+
+export interface AvailabilityResponse {
+  date: string;
+  duration: number;
+  totalDrivers: number;
+  slots: AvailabilitySlot[];
+}
+
 export interface OfferInput {
   price: number;
   /** @nullable */
@@ -432,6 +457,17 @@ export const ListRidesStatus = {
   completed: 'completed',
   cancelled: 'cancelled',
 } as const;
+
+export type GetRideAvailabilityParams = {
+/**
+ * Date in YYYY-MM-DD format
+ */
+date: string;
+/**
+ * Estimated trip duration in minutes (default: 60)
+ */
+duration?: number;
+};
 
 export type GetAdminScheduledRidesParams = {
 scheduledStatus?: GetAdminScheduledRidesScheduledStatus;

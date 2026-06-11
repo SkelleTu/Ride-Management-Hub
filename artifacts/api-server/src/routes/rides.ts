@@ -208,6 +208,83 @@ ridesRouter.get("/scheduled", requireAuth, async (req, res) => {
   res.json(result);
 });
 
+// GET /rides/availability?date=YYYY-MM-DD&duration=N (minutes)
+// Returns 30-min time slots for the day with available driver counts.
+ridesRouter.get("/availability", requireAuth, async (req, res) => {
+  const { date, duration } = req.query as { date?: string; duration?: string };
+
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    res.status(400).json({ error: "date required in YYYY-MM-DD format" }); return;
+  }
+  const durationMin = parseInt(duration ?? "60");
+  if (isNaN(durationMin) || durationMin < 5) {
+    res.status(400).json({ error: "duration must be >= 5 minutes" }); return;
+  }
+
+  const approvedDrivers = await db.select()
+    .from(driverProfilesTable)
+    .where(eq(driverProfilesTable.status, "approved"));
+  const totalDrivers = approvedDrivers.length;
+  const approvedDriverIds = new Set(approvedDrivers.map(d => d.userId));
+
+  // All confirmed scheduled rides (with a driver assigned)
+  const confirmedRides = await db.select().from(ridesTable).where(
+    and(
+      eq(ridesTable.isScheduled, true),
+      eq(ridesTable.scheduledStatus, "confirmed")
+    )
+  );
+
+  const [year, month, day] = date.split("-").map(Number);
+
+  const slots: Array<{
+    time: string;
+    datetime: string;
+    available: boolean;
+    driverCount: number;
+    totalDrivers: number;
+  }> = [];
+
+  for (let hour = 5; hour <= 23; hour++) {
+    for (let minuteOffset = 0; minuteOffset < 60; minuteOffset += 30) {
+      if (hour === 23 && minuteOffset > 30) break;
+
+      const slotStart = new Date(year, month - 1, day, hour, minuteOffset, 0);
+      // Skip past slots
+      if (slotStart <= new Date()) continue;
+
+      const slotEnd = new Date(slotStart.getTime() + durationMin * 60 * 1000);
+      const windowStart = new Date(slotStart.getTime() - SCHEDULE_BUFFER_MS);
+      const windowEnd = new Date(slotEnd.getTime() + SCHEDULE_BUFFER_MS);
+
+      const busyDriverIds = new Set<number>();
+      for (const ride of confirmedRides) {
+        if (!ride.driverId || !ride.scheduledFor) continue;
+        if (!approvedDriverIds.has(ride.driverId)) continue;
+        const rideStart = new Date(ride.scheduledFor);
+        const rideDurMin = ride.estimatedDuration ? Math.ceil(ride.estimatedDuration / 60) : 60;
+        const rideEnd = new Date(rideStart.getTime() + rideDurMin * 60 * 1000);
+        if (windowStart < rideEnd && windowEnd > rideStart) {
+          busyDriverIds.add(ride.driverId);
+        }
+      }
+
+      const availableCount = totalDrivers - busyDriverIds.size;
+      const pad = (n: number) => String(n).padStart(2, "0");
+
+      slots.push({
+        time: `${pad(hour)}:${pad(minuteOffset)}`,
+        datetime: slotStart.toISOString(),
+        available: availableCount > 0,
+        driverCount: Math.max(0, availableCount),
+        totalDrivers,
+      });
+    }
+  }
+
+  res.json({ date, duration: durationMin, totalDrivers, slots });
+});
+
 ridesRouter.get("/active", requireAuth, async (req, res) => {
   const rides = await db.select().from(ridesTable)
     .where(
@@ -334,7 +411,7 @@ ridesRouter.patch("/:id/accept-scheduled", requireAuth, async (req, res) => {
   const id = parseInt(String(req.params.id));
   const currentUser = (req as any).user;
 
-  if (currentUser.role !== "driver" && currentUser.role !== "admin") {
+  if (currentUser.role !== "driver") {
     res.status(403).json({ error: "Only drivers can accept scheduled rides" }); return;
   }
 
@@ -385,7 +462,7 @@ ridesRouter.patch("/:id/decline-scheduled", requireAuth, async (req, res) => {
   const currentUser = (req as any).user;
   const { reason } = req.body ?? {};
 
-  if (currentUser.role !== "driver" && currentUser.role !== "admin") {
+  if (currentUser.role !== "driver") {
     res.status(403).json({ error: "Only drivers can decline scheduled rides" }); return;
   }
 
