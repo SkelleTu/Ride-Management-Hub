@@ -23,8 +23,11 @@ async function fetchRoute(origin: LocationPoint, destination: LocationPoint): Pr
   routePoints: [number, number][];
 } | null> {
   try {
-    const url = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`;
-    const r = await fetch(url);
+    const params = new URLSearchParams({
+      olng: String(origin.lng), olat: String(origin.lat),
+      dlng: String(destination.lng), dlat: String(destination.lat),
+    });
+    const r = await fetch(`/api/proxy/route?${params}`);
     const data = await r.json();
     if (data.code !== "Ok" || !data.routes?.[0]) return null;
     const route = data.routes[0];
@@ -79,9 +82,7 @@ export default function PassengerHome() {
   const searchAddress = async (query: string, type: "origin" | "dest") => {
     if (query.length < 3) return;
     try {
-      const r = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&countrycodes=br`
-      );
+      const r = await fetch(`/api/proxy/geocode?q=${encodeURIComponent(query)}`);
       const data = await r.json();
       if (type === "origin") setOriginSuggestions(data);
       else setDestSuggestions(data);
