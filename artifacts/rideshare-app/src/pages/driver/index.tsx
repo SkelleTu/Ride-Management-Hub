@@ -31,6 +31,24 @@ export default function DriverHome() {
     enabled: !!user?.id,
   });
 
+  // Poll for accepted/in_progress ride assigned to this driver and redirect
+  useQuery({
+    queryKey: ["driver-active-ride", user?.id],
+    queryFn: async () => {
+      const token = localStorage.getItem("token");
+      const r = await fetch(`/api/rides?driverId=${user!.id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (!r.ok) return null;
+      const list: any[] = await r.json();
+      const active = list.find(ride => ride.status === "accepted" || ride.status === "in_progress");
+      if (active) setLocation(`/driver/ride/${active.id}`);
+      return active ?? null;
+    },
+    enabled: !!user?.id,
+    refetchInterval: 5000,
+  });
+
   const isApproved = profile?.status === "approved";
 
   if (isLoading) return (
