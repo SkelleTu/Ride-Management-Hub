@@ -4,6 +4,25 @@ import { User, UserRole } from "@workspace/api-client-react";
 import { useGetMe, getGetMeQueryKey, useLogout } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 
+const USER_CACHE_KEY = "upcar_user_cache";
+
+function loadCachedUser(): User | null {
+  try {
+    const raw = localStorage.getItem(USER_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as User) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveCachedUser(user: User | null) {
+  if (user) {
+    localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
+  } else {
+    localStorage.removeItem(USER_CACHE_KEY);
+  }
+}
+
 interface AuthState {
   user: User | null;
   isLoading: boolean;
@@ -16,12 +35,12 @@ interface AuthState {
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => loadCachedUser());
   const [token, setToken] = useState<string | null>(localStorage.getItem("token"));
   const [selectedRole, setSelectedRoleState] = useState<UserRole | null>(
     (localStorage.getItem("selectedRole") as UserRole) || null
   );
-  
+
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
@@ -29,8 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     query: {
       enabled: !!token,
       queryKey: getGetMeQueryKey(),
-      retry: 2,
-      retryDelay: 3000,
+      retry: 3,
+      retryDelay: 2000,
     },
     request: {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined
@@ -42,17 +61,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (me) {
       setUser(me);
+      saveCachedUser(me);
     }
   }, [me]);
 
   useEffect(() => {
     if (error) {
-      // Only force logout on actual auth failures (401/403), not network/server errors
       const status = (error as any)?.status;
       if (status === 401 || status === 403) {
         handleLogout();
       }
-      // For network errors or server errors, keep the session alive
+      // Network/server errors: keep the cached user, don't log out
     }
   }, [error]);
 
@@ -60,10 +79,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("token", newToken);
     setToken(newToken);
     setUser(newUser);
+    saveCachedUser(newUser);
   };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    saveCachedUser(null);
     setToken(null);
     setUser(null);
     queryClient.clear();
@@ -85,11 +106,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSelectedRoleState(role);
   };
 
+  // isLoading only blocks the UI if we have NO cached user to show
+  const resolvedLoading = isLoading && !!token && !user;
+
   return (
     <AuthContext.Provider
       value={{
         user,
-        isLoading: isLoading && !!token,
+        isLoading: resolvedLoading,
         login,
         logout: logoutAndClear,
         selectedRole,
