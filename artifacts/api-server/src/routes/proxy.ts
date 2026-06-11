@@ -10,18 +10,23 @@ router.get("/geocode", async (req, res) => {
     const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lang=default&limit=5`;
     const r = await fetch(url, { headers: { "User-Agent": "UPcar/1.0" } });
     const raw = await r.json() as { features?: any[] };
-    // Normalize to the shape the frontend expects (same as Nominatim)
-    const results = (raw.features ?? []).map((f: any) => ({
-      display_name: [
-        f.properties.name,
-        f.properties.street,
-        f.properties.city,
-        f.properties.state,
-        "Brasil",
-      ].filter(Boolean).join(", "),
-      lat: String(f.geometry.coordinates[1]),
-      lon: String(f.geometry.coordinates[0]),
-    }));
+    const results = (raw.features ?? []).map((f: any) => {
+      const p = f.properties;
+      // Build street line: "Rua X, 123" or just "Rua X"
+      const streetPart = p.street
+        ? (p.housenumber ? `${p.street}, ${p.housenumber}` : p.street)
+        : null;
+      // Main name (place/POI) — skip if same as street
+      const namePart = p.name && p.name !== p.street ? p.name : null;
+      const display_name = [namePart, streetPart, p.district, p.city, p.state]
+        .filter(Boolean).join(", ");
+      return {
+        display_name,
+        postcode: p.postcode ?? null,
+        lat: String(f.geometry.coordinates[1]),
+        lon: String(f.geometry.coordinates[0]),
+      };
+    });
     res.json(results);
   } catch (e) {
     res.status(502).json({ error: "geocode failed" });

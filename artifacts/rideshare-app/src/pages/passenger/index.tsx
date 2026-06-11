@@ -101,7 +101,10 @@ export default function PassengerHome() {
   };
 
   const selectAddress = (item: any, type: "origin" | "dest") => {
-    const point = { address: item.display_name, lat: parseFloat(item.lat), lng: parseFloat(item.lon) };
+    const fullAddress = item.postcode
+      ? `${item.display_name} — CEP ${item.postcode}`
+      : item.display_name;
+    const point = { address: fullAddress, lat: parseFloat(item.lat), lng: parseFloat(item.lon) };
     if (type === "origin") {
       setOrigin(point);
       setOriginQuery(item.display_name.split(",")[0]);
@@ -196,7 +199,10 @@ export default function PassengerHome() {
                 <button key={i} onClick={() => selectAddress(s, "origin")}
                   className="w-full text-left px-3 py-2.5 text-sm hover:bg-secondary transition-colors border-b border-border last:border-0">
                   <div className="font-medium truncate">{s.display_name.split(",")[0]}</div>
-                  <div className="text-xs text-muted-foreground truncate">{s.display_name.split(",").slice(1, 3).join(",")}</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {s.display_name.split(",").slice(1, 3).join(",")}
+                    {s.postcode ? ` · CEP ${s.postcode}` : ""}
+                  </div>
                 </button>
               ))}
             </div>
@@ -221,7 +227,10 @@ export default function PassengerHome() {
                 <button key={i} onClick={() => selectAddress(s, "dest")}
                   className="w-full text-left px-3 py-2.5 text-sm hover:bg-secondary transition-colors border-b border-border last:border-0">
                   <div className="font-medium truncate">{s.display_name.split(",")[0]}</div>
-                  <div className="text-xs text-muted-foreground truncate">{s.display_name.split(",").slice(1, 3).join(",")}</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {s.display_name.split(",").slice(1, 3).join(",")}
+                    {s.postcode ? ` · CEP ${s.postcode}` : ""}
+                  </div>
                 </button>
               ))}
             </div>

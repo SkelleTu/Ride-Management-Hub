@@ -90,7 +90,12 @@ export default function DriverHome() {
                     <div className="w-2 h-2 rounded-full bg-primary mt-1.5 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="text-xs text-muted-foreground">Embarque</div>
-                      <div className="text-sm font-medium truncate">{ride.originAddress.split(",")[0]}</div>
+                      <div className="text-sm font-medium">{ride.originAddress.split(",")[0]}</div>
+                      {ride.originAddress.includes(",") && (
+                        <div className="text-xs text-muted-foreground truncate">
+                          {ride.originAddress.split(",").slice(1).join(",").trim()}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="ml-1 border-l-2 border-dashed border-muted-foreground/30 h-3" />
@@ -98,7 +103,12 @@ export default function DriverHome() {
                     <Navigation className="w-3 h-3 text-accent mt-1 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="text-xs text-muted-foreground">Destino</div>
-                      <div className="text-sm font-medium truncate">{ride.destinationAddress.split(",")[0]}</div>
+                      <div className="text-sm font-medium">{ride.destinationAddress.split(",")[0]}</div>
+                      {ride.destinationAddress.includes(",") && (
+                        <div className="text-xs text-muted-foreground truncate">
+                          {ride.destinationAddress.split(",").slice(1).join(",").trim()}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
