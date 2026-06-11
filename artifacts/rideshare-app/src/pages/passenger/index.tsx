@@ -366,7 +366,8 @@ export default function PassengerHome() {
 
   return (
     <>
-      <div className="fixed inset-x-0 top-20 bottom-0 z-0">
+      {/* Map — full screen on desktop, above BottomNav on mobile */}
+      <div className="fixed top-20 bottom-16 md:bottom-0 left-0 right-0 md:left-96 z-0">
         <MapView
           origin={origin}
           destination={destination}
@@ -378,9 +379,11 @@ export default function PassengerHome() {
         />
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border rounded-t-2xl shadow-2xl p-4 z-[1000]">
-        <div className="max-h-[80vh] overflow-y-auto space-y-3 pb-16 md:pb-2">
-          <div className="w-10 h-1 bg-muted rounded-full mx-auto" />
+      {/* Form — sidebar on desktop, bottom sheet on mobile */}
+      <div className="fixed bottom-16 left-0 right-0 md:bottom-0 md:top-20 md:right-auto md:w-96 bg-card border-t md:border-t-0 md:border-r border-border rounded-t-2xl md:rounded-none shadow-2xl md:shadow-xl p-4 z-[1000]">
+        <div className="max-h-[70vh] md:max-h-none md:h-[calc(100dvh-80px)] overflow-y-auto space-y-3 pb-4 md:pb-6">
+          {/* Drag handle — mobile only */}
+          <div className="w-10 h-1 bg-muted rounded-full mx-auto md:hidden" />
 
           {/* Mode toggle: Agora / Agendar */}
           <div className="flex items-center gap-2">
