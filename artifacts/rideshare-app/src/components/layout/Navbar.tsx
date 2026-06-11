@@ -65,7 +65,7 @@ export function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="container mx-auto px-4 h-20 flex items-center justify-between">
         <Link href={selectedRole ? `/${selectedRole}` : "/"} className="flex items-center gap-2">
           <UPcarLogo size={76} />
         </Link>
