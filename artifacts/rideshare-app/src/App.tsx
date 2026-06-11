@@ -25,6 +25,7 @@ import DriverHistory from "@/pages/driver/history";
 
 import PassengerScheduled from "@/pages/passenger/scheduled";
 import DriverScheduled from "@/pages/driver/scheduled";
+import LiveBoard from "@/pages/live-board";
 
 import AdminHome from "@/pages/admin/index";
 import AdminDrivers from "@/pages/admin/drivers";
@@ -61,6 +62,13 @@ function Router() {
         <ProtectedRoute allowedRoles={["passenger", "admin"]}>
           <AppLayout>
             <PassengerScheduled />
+          </AppLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/live-board">
+        <ProtectedRoute allowedRoles={["passenger", "driver", "admin"]}>
+          <AppLayout>
+            <LiveBoard />
           </AppLayout>
         </ProtectedRoute>
       </Route>

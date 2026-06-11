@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { Home, Calendar, Clock, User, LayoutDashboard, Car, Shield } from "lucide-react";
+import { Home, Calendar, Clock, User, LayoutDashboard, Car, Shield, Radio } from "lucide-react";
 
 export function BottomNav() {
   const { user, selectedRole } = useAuth();
@@ -32,6 +32,10 @@ export function BottomNav() {
           <Calendar className={iconClass("/passenger/scheduled")} />
           Agenda
         </Link>
+        <Link href="/live-board" className={linkClass("/live-board")}>
+          <Radio className={iconClass("/live-board")} />
+          Ao Vivo
+        </Link>
         <Link href="/passenger/history" className={linkClass("/passenger/history")}>
           <Clock className={iconClass("/passenger/history")} />
           Histórico
@@ -50,6 +54,10 @@ export function BottomNav() {
         <Link href="/driver/scheduled" className={linkClass("/driver/scheduled")}>
           <Calendar className={iconClass("/driver/scheduled")} />
           Agenda
+        </Link>
+        <Link href="/live-board" className={linkClass("/live-board")}>
+          <Radio className={iconClass("/live-board")} />
+          Ao Vivo
         </Link>
         <Link href="/driver/history" className={linkClass("/driver/history")}>
           <Clock className={iconClass("/driver/history")} />
@@ -73,6 +81,10 @@ export function BottomNav() {
         <Link href="/admin/scheduled" className={linkClass("/admin/scheduled")}>
           <Calendar className={iconClass("/admin/scheduled")} />
           Agenda
+        </Link>
+        <Link href="/live-board" className={linkClass("/live-board")}>
+          <Radio className={iconClass("/live-board")} />
+          Ao Vivo
         </Link>
         <Link href="/admin/rides" className={linkClass("/admin/rides")}>
           <Car className={iconClass("/admin/rides")} />
