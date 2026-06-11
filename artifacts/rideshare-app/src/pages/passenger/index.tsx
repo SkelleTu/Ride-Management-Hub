@@ -366,7 +366,7 @@ export default function PassengerHome() {
 
   return (
     <>
-      <div className="fixed inset-x-0 top-16 bottom-0 z-0">
+      <div className="fixed inset-x-0 top-20 bottom-0 z-0">
         <MapView
           origin={origin}
           destination={destination}
@@ -379,7 +379,7 @@ export default function PassengerHome() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border rounded-t-2xl shadow-2xl p-4 z-[1000]">
-        <div className="max-h-[80vh] overflow-y-auto space-y-3 pb-1">
+        <div className="max-h-[80vh] overflow-y-auto space-y-3 pb-16 md:pb-2">
           <div className="w-10 h-1 bg-muted rounded-full mx-auto" />
 
           {/* Mode toggle: Agora / Agendar */}

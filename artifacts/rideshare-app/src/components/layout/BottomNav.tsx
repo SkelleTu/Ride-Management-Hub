@@ -23,7 +23,7 @@ export function BottomNav() {
 
   if (selectedRole === "passenger") {
     return (
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur border-t border-border flex items-center safe-area-pb">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[1100] bg-card/95 backdrop-blur border-t border-border flex items-center safe-area-pb">
         <Link href="/passenger" className={linkClass("/passenger")}>
           <Home className={iconClass("/passenger")} />
           Solicitar
@@ -46,7 +46,7 @@ export function BottomNav() {
 
   if (selectedRole === "driver") {
     return (
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur border-t border-border flex items-center safe-area-pb">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[1100] bg-card/95 backdrop-blur border-t border-border flex items-center safe-area-pb">
         <Link href="/driver" className={linkClass("/driver")}>
           <Car className={iconClass("/driver")} />
           Corridas
@@ -73,7 +73,7 @@ export function BottomNav() {
 
   if (user.role === "admin" && selectedRole === "admin") {
     return (
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur border-t border-border flex items-center safe-area-pb">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[1100] bg-card/95 backdrop-blur border-t border-border flex items-center safe-area-pb">
         <Link href="/admin" className={linkClass("/admin")}>
           <LayoutDashboard className={iconClass("/admin")} />
           Dashboard
