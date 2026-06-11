@@ -47,3 +47,7 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Backups (manter .gitkeep mas ignorar os arquivos de backup)
+backups/*.sql
+backups/*.json
