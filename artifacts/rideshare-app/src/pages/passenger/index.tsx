@@ -254,6 +254,10 @@ export default function PassengerHome() {
                 placeholder={isLocating ? "Detectando sua localização..." : "De onde?"}
                 value={originQuery}
                 disabled={isLocating}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
                 onChange={(e) => {
                   setOriginQuery(e.target.value);
                   setOrigin(null);
@@ -268,7 +272,7 @@ export default function PassengerHome() {
             {originSuggestions.length > 0 && (
               <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
                 {originSuggestions.map((s, i) => (
-                  <button key={i} onClick={() => selectAddress(s, "origin")}
+                  <button key={i} onMouseDown={(e) => { e.preventDefault(); selectAddress(s, "origin"); }}
                     className="w-full text-left px-3 py-2.5 text-sm hover:bg-secondary transition-colors border-b border-border last:border-0">
                     <div className="font-medium truncate">{s.display_name.split(",")[0]}</div>
                     <div className="text-xs text-muted-foreground truncate">
@@ -302,6 +306,10 @@ export default function PassengerHome() {
                 data-testid="input-destination"
                 placeholder="Para onde?"
                 value={destQuery}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
                 onChange={(e) => {
                   setDestQuery(e.target.value);
                   setDestination(null);
@@ -313,7 +321,7 @@ export default function PassengerHome() {
             {destSuggestions.length > 0 && (
               <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
                 {destSuggestions.map((s, i) => (
-                  <button key={i} onClick={() => selectAddress(s, "dest")}
+                  <button key={i} onMouseDown={(e) => { e.preventDefault(); selectAddress(s, "dest"); }}
                     className="w-full text-left px-3 py-2.5 text-sm hover:bg-secondary transition-colors border-b border-border last:border-0">
                     <div className="font-medium truncate">{s.display_name.split(",")[0]}</div>
                     <div className="text-xs text-muted-foreground truncate">
