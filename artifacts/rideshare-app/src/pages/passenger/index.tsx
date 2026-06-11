@@ -406,19 +406,17 @@ export default function PassengerHome() {
     setDestDragState("loading");
     setDestDragMsg("");
 
-    const distMeters = haversineMeters(destination.lat, destination.lng, lat, lng);
     const result = await reverseGeocodeDetail(lat, lng);
 
     if (!result) {
       setDestDragState("warning");
       setDestDragMsg("Não foi possível verificar o endereço");
       setDestination(prev => prev ? { ...prev, lat, lng } : prev);
+      setTimeout(() => setDestDragState(null), 4000);
       return;
     }
 
     const reversedRoad = result.address?.road ?? result.display_name.split(",")[0];
-    const compatible = streetsCompatible(destQuery, reversedRoad);
-
     const parts = [
       result.address?.road,
       result.address?.house_number,
@@ -426,26 +424,20 @@ export default function PassengerHome() {
     ].filter(Boolean).join(", ");
     const newShortAddress = parts || result.display_name.split(",")[0];
 
-    if (distMeters > 500) {
-      setDestDragState("far");
-      setDestDragMsg(`Muito longe do destino original (${Math.round(distMeters)} m). Verifique o ponto.`);
-      setDestination(prev => prev ? { ...prev, lat, lng, address: result.display_name } : prev);
-      setDestQuery(newShortAddress);
-      toast({ title: "Destino movido para área diferente", description: newShortAddress, variant: "destructive" });
-    } else if (!compatible) {
+    // Destination has no distance limit — only check if landed on a road
+    if (!reversedRoad) {
       setDestDragState("warning");
-      setDestDragMsg(`Rua detectada: "${reversedRoad}". Confirme se está correto.`);
-      setDestination(prev => prev ? { ...prev, lat, lng, address: result.display_name } : prev);
-      setDestQuery(newShortAddress);
-      toast({ title: "Rua de destino diferente", description: `O pin foi para: ${reversedRoad}` });
+      setDestDragMsg("Pin em área sem via identificada. Verifique o ponto.");
+      toast({ title: "Verifique o destino", description: "O pin parece estar fora de uma via." });
     } else {
       setDestDragState("ok");
-      setDestDragMsg(`Ponto ajustado na ${reversedRoad}`);
-      setDestination(prev => prev ? { ...prev, lat, lng, address: result.display_name } : prev);
-      setDestQuery(newShortAddress);
+      setDestDragMsg(`Destino ajustado: ${newShortAddress}`);
     }
+
+    setDestination(prev => prev ? { ...prev, lat, lng, address: result.display_name } : prev);
+    setDestQuery(newShortAddress);
     setTimeout(() => setDestDragState(null), 4000);
-  }, [destination, destQuery, toast]);
+  }, [destination, toast]);
 
   const handleSubmit = () => {
     if (!origin || !destination || !offeredPrice) {
