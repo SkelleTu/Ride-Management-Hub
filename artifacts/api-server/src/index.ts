@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { seedDefaultAccounts } from "@workspace/db/seed";
 
 const rawPort = process.env["PORT"];
 
@@ -14,6 +15,10 @@ const port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
+
+seedDefaultAccounts()
+  .then(() => logger.info("Seed de contas padrão concluído"))
+  .catch((err) => logger.warn({ err }, "Seed ignorado ou parcial"));
 
 app.listen(port, (err) => {
   if (err) {
