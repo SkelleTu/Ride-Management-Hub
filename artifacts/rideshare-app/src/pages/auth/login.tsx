@@ -54,7 +54,7 @@ export default function Login() {
           toast({
             variant: "destructive",
             title: "Erro ao fazer login",
-            description: (error as any)?.error || "Verifique suas credenciais.",
+            description: (error as any)?.data?.error || "Verifique suas credenciais.",
           });
         },
       }

@@ -96,7 +96,7 @@ export default function Register() {
           toast({
             variant: "destructive",
             title: "Erro ao cadastrar",
-            description: (error as any)?.error || "Verifique os dados informados.",
+            description: (error as any)?.data?.error || "Verifique os dados informados.",
           });
         },
       }
