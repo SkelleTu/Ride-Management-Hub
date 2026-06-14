@@ -1,9 +1,8 @@
 import { Link } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
-import { LogOut, Car, User, LayoutDashboard, Map, Calendar } from "lucide-react";
-import { UPcarLogo } from "@/components/ui/UPcarLogo";
 import { UserSideMenu } from "@/components/menu/UserSideMenu";
+import { UPcarLogo } from "@/components/ui/UPcarLogo";
+import { Calendar, Map } from "lucide-react";
 
 export function Navbar() {
   const { user, selectedRole, logout } = useAuth();
@@ -59,7 +58,7 @@ export function Navbar() {
       return (
         <>
           <Link href="/passenger" className="text-sm font-medium hover:text-primary transition-colors">
-            Solicitar
+            Solicitante
           </Link>
           <Link href="/passenger/scheduled" className="flex items-center gap-1 text-sm font-medium hover:text-primary transition-colors">
             <Calendar className="w-3.5 h-3.5" />
@@ -78,17 +77,28 @@ export function Navbar() {
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 h-20 flex items-center justify-between">
-        <Link href={selectedRole ? `/${selectedRole}` : "/"} className="flex items-center gap-2">
-          <UPcarLogo size={76} />
-        </Link>
 
+        {/* Desktop: nav links left-aligned | Mobile: logo left-aligned */}
         <div className="hidden md:flex items-center gap-6">
           {renderNavLinks()}
         </div>
 
+        {/* Logo — centered on desktop, left on mobile */}
+        <Link
+          href={selectedRole ? `/${selectedRole}` : "/"}
+          className="flex items-center md:absolute md:left-1/2 md:-translate-x-1/2"
+        >
+          {/* Mobile: smaller logo */}
+          <UPcarLogo size={52} className="md:hidden" />
+          {/* Desktop: larger logo */}
+          <UPcarLogo size={72} className="hidden md:block" />
+        </Link>
+
+        {/* Right: user menu */}
         <div className="flex items-center gap-2">
           {user ? <UserSideMenu /> : null}
         </div>
+
       </div>
     </nav>
   );
