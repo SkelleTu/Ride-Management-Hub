@@ -7,7 +7,7 @@ import { getListRidesQueryKey } from "@workspace/api-client-react";
 import MapView from "@/components/map/MapView";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronRight, Navigation, Loader2, Route, Hash, LocateFixed, Calendar, Clock, Radio, User2, FileText, Globe, AlertCircle, CheckCircle, MoveIcon } from "lucide-react";
+import { ChevronRight, ChevronUp, Navigation, Loader2, Route, Hash, LocateFixed, Calendar, Clock, Radio, User2, FileText, Globe, AlertCircle, CheckCircle, MoveIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const PRICE_PER_KM = 2;
@@ -147,6 +147,9 @@ export default function PassengerHome() {
 
   // ── Active map field (which pin map clicks go to) ──────────────────────
   const [activeField, setActiveField] = useState<"origin" | "destination">("origin");
+
+  // ── Mobile bottom sheet ────────────────────────────────────────────────
+  const [sheetExpanded, setSheetExpanded] = useState(false);
 
   // ── Drag-pin state ─────────────────────────────────────────────────────
   const [originDragState, setOriginDragState] = useState<DragState>(null);
@@ -534,11 +537,25 @@ export default function PassengerHome() {
         />
       </div>
 
-      {/* Form — sidebar on desktop, bottom sheet on mobile */}
-      <div className="fixed bottom-16 left-0 right-0 md:bottom-0 md:top-20 md:right-auto md:w-96 bg-card border-t md:border-t-0 md:border-r border-border rounded-t-2xl md:rounded-none shadow-2xl md:shadow-xl p-4 z-[1000]">
-        <div className="max-h-[70vh] md:max-h-none md:h-[calc(100dvh-80px)] overflow-y-auto space-y-3 pb-4 md:pb-6">
-          {/* Drag handle — mobile only */}
-          <div className="w-10 h-1 bg-muted rounded-full mx-auto md:hidden" />
+      {/* Form — sidebar on desktop, collapsible bottom sheet on mobile */}
+      <div
+        className={`fixed bottom-16 left-0 right-0 md:bottom-0 md:top-20 md:right-auto md:w-96
+          bg-card border-t md:border-t-0 md:border-r border-border rounded-t-2xl md:rounded-none
+          shadow-2xl md:shadow-xl z-[1000] overflow-hidden
+          transition-[max-height] duration-300 ease-in-out
+          md:!max-h-none md:overflow-visible
+          ${sheetExpanded ? 'max-h-[72vh]' : 'max-h-[190px]'}`}
+      >
+        <div className="p-4 md:h-[calc(100dvh-80px)] md:overflow-y-auto space-y-3 pb-4 md:pb-6 overflow-y-auto" style={{ maxHeight: 'inherit' }}>
+          {/* Drag handle — mobile only, click to expand/collapse */}
+          <button
+            onClick={() => setSheetExpanded(v => !v)}
+            className="w-full flex flex-col items-center gap-1 md:hidden pb-1 focus:outline-none"
+            aria-label={sheetExpanded ? "Recolher painel" : "Expandir painel"}
+          >
+            <div className="w-10 h-1 bg-muted rounded-full" />
+            <ChevronUp className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-300 ${sheetExpanded ? 'rotate-180' : ''}`} />
+          </button>
 
           {/* Mode toggle: Agora / Agendar */}
           <div className="flex items-center gap-2">
@@ -592,7 +609,7 @@ export default function PassengerHome() {
                   autoCorrect="off"
                   autoCapitalize="off"
                   spellCheck={false}
-                  onFocus={() => setActiveField("origin")}
+                  onFocus={() => { setActiveField("origin"); setSheetExpanded(true); }}
                   onChange={(e) => {
                     setOriginQuery(e.target.value);
                     setOrigin(null);
@@ -691,7 +708,7 @@ export default function PassengerHome() {
                   autoCorrect="off"
                   autoCapitalize="off"
                   spellCheck={false}
-                  onFocus={() => setActiveField("destination")}
+                  onFocus={() => { setActiveField("destination"); setSheetExpanded(true); }}
                   onChange={(e) => {
                     setDestQuery(e.target.value);
                     setDestination(null);
