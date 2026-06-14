@@ -1,4 +1,4 @@
-import { useEffect, useRef, memo } from 'react';
+import { useEffect, useRef, memo, useState, useCallback } from 'react';
 import L from 'leaflet';
 
 interface MapViewProps {
@@ -94,6 +94,98 @@ const destinationIcon = new L.Icon({
 
 const PERSON_PATH = `<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>`;
 const CAR_PATH = `<rect x="2" y="9" width="20" height="9" rx="2"/><path d="M16 9V7a4 4 0 0 0-8 0v2"/><circle cx="7" cy="18" r="1"/><circle cx="17" cy="18" r="1"/>`;
+
+// ── Compass ────────────────────────────────────────────────────────────────
+function MapCompass() {
+  const [heading, setHeading] = useState<number>(0);
+  const [active, setActive] = useState(false);
+  const [needsPermission, setNeedsPermission] = useState(false);
+
+  const startListening = useCallback(() => {
+    const handler = (e: DeviceOrientationEvent) => {
+      const webkit = (e as any).webkitCompassHeading;
+      if (webkit != null) {
+        setHeading(webkit);
+        setActive(true);
+      } else if (e.alpha != null) {
+        setHeading(360 - e.alpha);
+        setActive(true);
+      }
+    };
+    window.addEventListener('deviceorientation', handler, true);
+    return () => window.removeEventListener('deviceorientation', handler, true);
+  }, []);
+
+  useEffect(() => {
+    if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+      setNeedsPermission(true);
+    } else if ('DeviceOrientationEvent' in window) {
+      return startListening();
+    }
+  }, [startListening]);
+
+  const requestPermission = useCallback(async () => {
+    try {
+      const res = await (DeviceOrientationEvent as any).requestPermission();
+      if (res === 'granted') {
+        setNeedsPermission(false);
+        startListening();
+      }
+    } catch {}
+  }, [startListening]);
+
+  const rotation = -heading;
+
+  return (
+    <div
+      onClick={needsPermission ? requestPermission : undefined}
+      title={needsPermission ? "Toque para ativar a bússola" : active ? `${Math.round(heading)}° Norte` : "Bússola"}
+      style={{
+        position: 'absolute',
+        bottom: '90px',
+        right: '10px',
+        zIndex: 1000,
+        width: '40px',
+        height: '40px',
+        borderRadius: '50%',
+        background: 'rgba(15,15,20,0.82)',
+        border: '1.5px solid rgba(255,255,255,0.18)',
+        backdropFilter: 'blur(6px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: needsPermission ? 'pointer' : 'default',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+      }}
+    >
+      <svg
+        width="28"
+        height="28"
+        viewBox="0 0 28 28"
+        style={{ transform: `rotate(${rotation}deg)`, transition: active ? 'transform 0.15s ease-out' : 'none' }}
+      >
+        {/* Outer ring tick marks */}
+        {[0,45,90,135,180,225,270,315].map((deg) => (
+          <line
+            key={deg}
+            x1="14" y1="3.5" x2="14" y2={deg % 90 === 0 ? "5.5" : "5"}
+            stroke="rgba(255,255,255,0.3)"
+            strokeWidth={deg % 90 === 0 ? "1.5" : "1"}
+            transform={`rotate(${deg} 14 14)`}
+          />
+        ))}
+        {/* North needle — red */}
+        <polygon points="14,4 11.5,14 14,12.5 16.5,14" fill="#ef4444" />
+        {/* South needle — white/grey */}
+        <polygon points="14,24 11.5,14 14,15.5 16.5,14" fill="rgba(255,255,255,0.55)" />
+        {/* Center dot */}
+        <circle cx="14" cy="14" r="2" fill="rgba(255,255,255,0.9)" />
+        {/* N label */}
+        <text x="14" y="10" textAnchor="middle" fontSize="4" fontWeight="bold" fill="#ef4444" fontFamily="sans-serif">N</text>
+      </svg>
+    </div>
+  );
+}
 
 function MapView({
   origin, destination, driverPosition,
@@ -271,7 +363,12 @@ function MapView({
     }
   }, [routePoints]);
 
-  return <div ref={mapRef} className={className} />;
+  return (
+    <div className={`${className} relative`}>
+      <div ref={mapRef} className="h-full w-full" />
+      <MapCompass />
+    </div>
+  );
 }
 
 export default memo(MapView);
