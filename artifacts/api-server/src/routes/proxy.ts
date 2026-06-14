@@ -48,6 +48,28 @@ router.get("/geocode", async (req, res) => {
   }
 });
 
+router.get("/cep/:cep", async (req, res) => {
+  const cep = req.params.cep.replace(/\D/g, "");
+  if (cep.length !== 8) return res.status(400).json({ error: "CEP inválido" });
+  try {
+    const r = await fetch(`https://brasilapi.com.br/api/cep/v2/${cep}`, {
+      signal: AbortSignal.timeout(6000),
+    });
+    if (r.status === 404) return res.status(404).json({ error: "CEP não encontrado" });
+    if (!r.ok) return res.status(502).json({ error: "Consulta CEP falhou" });
+    const data = await r.json() as any;
+    res.json({
+      cep: data.cep,
+      street: data.street ?? "",
+      neighborhood: data.neighborhood ?? "",
+      city: data.city ?? "",
+      state: data.state ?? "",
+    });
+  } catch {
+    res.status(502).json({ error: "Consulta CEP falhou" });
+  }
+});
+
 router.get("/route", async (req, res) => {
   const { olng, olat, dlng, dlat } = req.query;
   if (!olng || !olat || !dlng || !dlat) return res.status(400).json({ error: "coords required" });

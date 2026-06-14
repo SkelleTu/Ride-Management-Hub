@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Fingerprint, Loader2, CheckCircle, X } from "lucide-react";
+import { Fingerprint, Loader2, CheckCircle, X, MonitorSmartphone } from "lucide-react";
 import { registerBiometric, setBiometricEmail, deviceHasBiometric } from "@/lib/useBiometric";
 import { useToast } from "@/hooks/use-toast";
 
@@ -39,11 +39,10 @@ export function BiometricSetup({ token, email, onDone }: BiometricSetupProps) {
     deviceHasBiometric().then((has) => {
       setHasBiometric(has);
       setChecking(false);
-      if (!has) onDone();
     });
   }, []);
 
-  if (checking || !hasBiometric) return null;
+  if (checking) return null;
 
   const handleRegister = async () => {
     setLoading(true);
@@ -75,44 +74,58 @@ export function BiometricSetup({ token, email, onDone }: BiometricSetupProps) {
           <div className="flex justify-center mb-2">
             {done ? (
               <CheckCircle className="w-14 h-14 text-green-400" />
-            ) : (
+            ) : hasBiometric ? (
               <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
                 <Fingerprint className="w-8 h-8 text-primary" />
+              </div>
+            ) : (
+              <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center">
+                <MonitorSmartphone className="w-8 h-8 text-muted-foreground" />
               </div>
             )}
           </div>
           <DialogTitle className="text-xl">
-            {done ? "Biometria cadastrada!" : "Cadastrar biometria"}
+            {done ? "Biometria cadastrada!" : "Segurança biométrica"}
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground mt-1">
             {done
               ? "Agora você pode entrar com sua digital ou reconhecimento facial."
-              : "Use sua digital ou reconhecimento facial para entrar mais rápido e com mais segurança."}
+              : hasBiometric
+              ? "Use sua digital ou reconhecimento facial para entrar mais rápido e com mais segurança."
+              : "Seu navegador ou dispositivo não suporta biometria neste momento. Você poderá ativar depois nas configurações do app, em um celular ou computador com leitor biométrico."}
           </DialogDescription>
         </DialogHeader>
 
         {!done && (
           <div className="flex flex-col gap-3 mt-4">
+            {hasBiometric && (
+              <Button
+                className="w-full gap-2 h-12"
+                onClick={handleRegister}
+                disabled={loading}
+              >
+                {loading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Fingerprint className="w-5 h-5" />
+                )}
+                {loading ? "Aguardando biometria..." : "Cadastrar digital / Face ID"}
+              </Button>
+            )}
             <Button
-              className="w-full gap-2 h-12"
-              onClick={handleRegister}
-              disabled={loading}
-            >
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Fingerprint className="w-5 h-5" />
-              )}
-              {loading ? "Aguardando biometria..." : "Cadastrar digital / Face ID"}
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full gap-2 text-muted-foreground"
+              variant={hasBiometric ? "ghost" : "default"}
+              className="w-full gap-2"
               onClick={onDone}
               disabled={loading}
             >
-              <X className="w-4 h-4" />
-              Agora não
+              {hasBiometric ? (
+                <>
+                  <X className="w-4 h-4" />
+                  Agora não
+                </>
+              ) : (
+                "Continuar sem biometria"
+              )}
             </Button>
           </div>
         )}
