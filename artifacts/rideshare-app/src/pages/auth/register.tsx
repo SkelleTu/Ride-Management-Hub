@@ -32,6 +32,19 @@ async function compressPhoto(file: File): Promise<string> {
   });
 }
 
+function maskPhone(value: string) {
+  const d = value.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 2) return d.length ? `(${d}` : "";
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
+
+function validatePhone(value: string): boolean {
+  const d = value.replace(/\D/g, "");
+  return d.length === 10 || d.length === 11;
+}
+
 function maskCPF(value: string) {
   return value
     .replace(/\D/g, "")
@@ -158,6 +171,10 @@ export default function Register() {
       }
       if (!name.trim() || !email.trim() || !phone.trim() || !password.trim()) {
         toast({ title: "Preencha todos os campos", variant: "destructive" });
+        return;
+      }
+      if (!validatePhone(phone)) {
+        toast({ title: "Celular inválido", description: "Informe o DDD + número com 10 ou 11 dígitos.", variant: "destructive" });
         return;
       }
     }
@@ -306,8 +323,22 @@ export default function Register() {
                       <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="bg-secondary/50 border-border" />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="phone">Celular</Label>
-                      <Input id="phone" type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} className="bg-secondary/50 border-border" placeholder="(11) 99999-9999" />
+                      <Label htmlFor="phone">Celular <span className="text-destructive">*</span></Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        inputMode="numeric"
+                        required
+                        value={phone}
+                        onChange={(e) => setPhone(maskPhone(e.target.value))}
+                        className={`bg-secondary/50 border-border ${phone && !validatePhone(phone) ? "border-destructive" : ""}`}
+                        placeholder="(11) 99999-9999"
+                      />
+                      {phone && !validatePhone(phone) && (
+                        <p className="text-xs text-destructive flex gap-1 items-center">
+                          <AlertCircle className="w-3 h-3" /> Número inválido — DDD + número (10 ou 11 dígitos)
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="password">Senha</Label>
