@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { RegisterBody, LoginBody } from "@workspace/api-zod";
 import { hashPassword, generateToken, storeToken, removeToken, requireAuth } from "../lib/auth";
 import { activityLogTable } from "@workspace/db";
-import { notifyNewRegistration } from "../lib/whatsapp";
+import { notifyOwner, sendWelcome } from "../lib/whatsapp";
 
 export const authRouter = Router();
 
@@ -36,7 +36,7 @@ authRouter.post("/register", async (req, res) => {
     userId: user.id,
     userName: user.name,
   });
-  notifyNewRegistration({
+  notifyOwner({
     name: user.name,
     email: user.email,
     phone: user.phone ?? "",
@@ -75,6 +75,27 @@ authRouter.post("/login", async (req, res) => {
   storeToken(token, user.id);
   const { passwordHash: _, ...safeUser } = user;
   res.json({ user: { ...safeUser, driverProfile }, token });
+});
+
+authRouter.get("/whatsapp-info", (_req, res) => {
+  const from = process.env.TWILIO_WHATSAPP_FROM ?? "whatsapp:+14155238886";
+  const sandboxCode = process.env.TWILIO_SANDBOX_CODE ?? "";
+  const number = from.replace("whatsapp:+", "");
+  res.json({ number, sandboxCode });
+});
+
+authRouter.post("/send-welcome", async (req, res) => {
+  const { name, phone, role } = req.body;
+  if (!name || !phone || !role) {
+    res.status(400).json({ error: "name, phone e role são obrigatórios" });
+    return;
+  }
+  try {
+    await sendWelcome({ name, phone, role });
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message ?? "Falha ao enviar mensagem" });
+  }
 });
 
 authRouter.post("/logout", requireAuth, (req, res) => {

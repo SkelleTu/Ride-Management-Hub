@@ -10,6 +10,7 @@ import { ArrowLeft, Loader2, Camera, ImageIcon, ChevronRight, MapPin, AlertCircl
 import { useToast } from "@/hooks/use-toast";
 import { UPcarLogo } from "@/components/ui/UPcarLogo";
 import { BiometricSetup } from "@/components/auth/BiometricSetup";
+import { WhatsAppActivation } from "@/components/auth/WhatsAppActivation";
 
 async function compressPhoto(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -104,6 +105,7 @@ export default function Register() {
 
   const [biometricData, setBiometricData] = useState<{ token: string; email: string } | null>(null);
   const [pendingRoute, setPendingRoute] = useState<string | null>(null);
+  const [whatsappData, setWhatsappData] = useState<{ name: string; phone: string; role: "passenger" | "driver"; token: string } | null>(null);
 
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
@@ -227,10 +229,12 @@ export default function Register() {
             login(token, { ...data.user, avatarUrl: photoPreview });
             const route = role === "driver" ? "/driver/profile" : "/passenger";
             setPendingRoute(route);
-            setBiometricData({ token, email });
+            setWhatsappData({ name, phone, role, token });
           } catch {
             login(data.token, data.user);
-            setLocation(role === "driver" ? "/driver/profile" : "/passenger");
+            const route = role === "driver" ? "/driver/profile" : "/passenger";
+            setPendingRoute(route);
+            setWhatsappData({ name, phone, role, token: data.token });
           }
         },
         onError: (error) => {
@@ -242,6 +246,15 @@ export default function Register() {
         },
       }
     );
+  };
+
+  const handleWhatsAppDone = () => {
+    setWhatsappData(null);
+    if (whatsappData) {
+      setBiometricData({ token: whatsappData.token, email });
+    } else if (pendingRoute) {
+      setLocation(pendingRoute);
+    }
   };
 
   const handleBiometricDone = () => {
@@ -446,6 +459,16 @@ export default function Register() {
           </Card>
         </div>
       </div>
+
+      {whatsappData && (
+        <WhatsAppActivation
+          name={whatsappData.name}
+          phone={whatsappData.phone}
+          role={whatsappData.role}
+          token={whatsappData.token}
+          onDone={handleWhatsAppDone}
+        />
+      )}
 
       {biometricData && (
         <BiometricSetup
