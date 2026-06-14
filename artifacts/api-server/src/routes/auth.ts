@@ -13,7 +13,7 @@ authRouter.post("/register", async (req, res) => {
     res.status(400).json({ error: "Validation error", details: parsed.error.issues });
     return;
   }
-  const { name, email, password, phone, role } = parsed.data;
+  const { name, email, password, phone, role, cpf, address } = parsed.data;
   const existing = await db.select().from(usersTable).where(eq(usersTable.email, email));
   if (existing.length > 0) {
     res.status(409).json({ error: "Email already registered" });
@@ -25,6 +25,8 @@ authRouter.post("/register", async (req, res) => {
     passwordHash: hashPassword(password),
     phone,
     role,
+    ...(cpf ? { cpf } : {}),
+    ...(address ? { address } : {}),
   }).returning();
   // Log activity
   await db.insert(activityLogTable).values({

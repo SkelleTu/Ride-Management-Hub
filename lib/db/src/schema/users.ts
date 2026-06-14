@@ -13,6 +13,8 @@ export const usersTable = pgTable("users", {
   rating: real("rating").default(4.60),
   totalRides: integer("total_rides").notNull().default(0),
   totalRatings: integer("total_ratings").notNull().default(0),
+  cpf: text("cpf"),
+  address: text("address"),
   isSuspended: boolean("is_suspended").notNull().default(false),
   suspendedReason: text("suspended_reason"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

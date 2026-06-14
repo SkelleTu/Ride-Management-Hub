@@ -30,7 +30,9 @@ export const RegisterBody = zod.object({
   "email": zod.string().email(),
   "password": zod.string().min(registerBodyPasswordMin),
   "phone": zod.string(),
-  "role": zod.enum(['passenger', 'driver'])
+  "role": zod.enum(['passenger', 'driver']),
+  "cpf": zod.string().optional(),
+  "address": zod.string().optional(),
 })
 
 
