@@ -60,7 +60,7 @@ interface DocUploadProps {
   required?: boolean;
   value: string;
   onChange: (v: string) => void;
-  hint?: string;
+  hint?: React.ReactNode;
 }
 
 function DocUpload({ label, required, value, onChange, hint }: DocUploadProps) {
@@ -347,28 +347,43 @@ export default function DriverProfile() {
             required
             value={formData.photoUrl ?? ""}
             onChange={v => updateField("photoUrl", v)}
-            hint="Selfie clara com rosto visível"
+            hint="Selfie clara com rosto visível e boa iluminação"
           />
           <DocUpload
             label="Foto da CNH"
             required
             value={formData.cnhPhotoUrl ?? ""}
             onChange={v => updateField("cnhPhotoUrl", v)}
-            hint="Frente e verso legíveis"
+            hint={<>
+              Frente e verso legíveis. Não tem CNH ou precisa da digital?{" "}
+              <a href="https://www.gov.br/pt-br/servicos/habilitar-se-para-conduzir-veiculos" target="_blank" rel="noreferrer" className="text-accent underline underline-offset-2 hover:opacity-80">
+                Acessar DETRAN/gov.br →
+              </a>
+            </>}
           />
           <DocUpload
             label="Foto do Veículo"
             required
             value={formData.vehiclePhotoUrl ?? ""}
             onChange={v => updateField("vehiclePhotoUrl", v)}
-            hint="Foto frontal mostrando a placa"
+            hint="Foto frontal mostrando a placa claramente"
           />
           <DocUpload
             label="Certidão de Antecedentes Criminais"
             required
             value={formData.criminalRecordUrl ?? ""}
             onChange={v => updateField("criminalRecordUrl", v)}
-            hint="Emitida gratuitamente em antecedentes.dpf.gov.br (Polícia Federal) ou na SSP do seu estado"
+            hint={<>
+              Gratuita e emitida online. Escolha abaixo:{" "}
+              <span className="flex flex-col gap-1 mt-1.5">
+                <a href="https://antecedentes.dpf.gov.br/" target="_blank" rel="noreferrer" className="text-accent underline underline-offset-2 hover:opacity-80">
+                  🏛️ Polícia Federal — antecedentes.dpf.gov.br →
+                </a>
+                <a href="https://www.gov.br/pt-br/servicos/obter-certidao-de-antecedentes-criminais" target="_blank" rel="noreferrer" className="text-accent underline underline-offset-2 hover:opacity-80">
+                  📋 Portal gov.br — Certidão de Antecedentes →
+                </a>
+              </span>
+            </>}
           />
         </div>
       )}
