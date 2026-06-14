@@ -100,6 +100,17 @@ function MapCompass() {
   const [heading, setHeading] = useState<number>(0);
   const [active, setActive] = useState(false);
   const [needsPermission, setNeedsPermission] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== 'undefined' && window.innerWidth >= 768
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    setIsDesktop(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   const startListening = useCallback(() => {
     const handler = (e: DeviceOrientationEvent) => {
@@ -136,17 +147,22 @@ function MapCompass() {
 
   const rotation = -heading;
 
+  // Desktop: 54px, beside zoom (right ~50px, bottom 10px)
+  // Mobile:  40px, above zoom  (right 10px,  bottom 90px)
+  const size    = isDesktop ? 54 : 40;
+  const svgSize = isDesktop ? 38 : 28;
+  const style: React.CSSProperties = isDesktop
+    ? { position: 'absolute', bottom: '10px', right: '50px', zIndex: 1000 }
+    : { position: 'absolute', bottom: '90px', right: '10px', zIndex: 1000 };
+
   return (
     <div
       onClick={needsPermission ? requestPermission : undefined}
       title={needsPermission ? "Toque para ativar a bússola" : active ? `${Math.round(heading)}° Norte` : "Bússola"}
       style={{
-        position: 'absolute',
-        bottom: '90px',
-        right: '10px',
-        zIndex: 1000,
-        width: '40px',
-        height: '40px',
+        ...style,
+        width: `${size}px`,
+        height: `${size}px`,
         borderRadius: '50%',
         background: 'rgba(15,15,20,0.82)',
         border: '1.5px solid rgba(255,255,255,0.18)',
@@ -156,15 +172,15 @@ function MapCompass() {
         justifyContent: 'center',
         cursor: needsPermission ? 'pointer' : 'default',
         boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+        transition: 'width 0.2s, height 0.2s',
       }}
     >
       <svg
-        width="28"
-        height="28"
+        width={svgSize}
+        height={svgSize}
         viewBox="0 0 28 28"
         style={{ transform: `rotate(${rotation}deg)`, transition: active ? 'transform 0.15s ease-out' : 'none' }}
       >
-        {/* Outer ring tick marks */}
         {[0,45,90,135,180,225,270,315].map((deg) => (
           <line
             key={deg}
@@ -174,13 +190,9 @@ function MapCompass() {
             transform={`rotate(${deg} 14 14)`}
           />
         ))}
-        {/* North needle — red */}
         <polygon points="14,4 11.5,14 14,12.5 16.5,14" fill="#ef4444" />
-        {/* South needle — white/grey */}
         <polygon points="14,24 11.5,14 14,15.5 16.5,14" fill="rgba(255,255,255,0.55)" />
-        {/* Center dot */}
         <circle cx="14" cy="14" r="2" fill="rgba(255,255,255,0.9)" />
-        {/* N label */}
         <text x="14" y="10" textAnchor="middle" fontSize="4" fontWeight="bold" fill="#ef4444" fontFamily="sans-serif">N</text>
       </svg>
     </div>
