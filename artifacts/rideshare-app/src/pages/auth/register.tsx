@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2, Camera } from "lucide-react";
+import { ArrowLeft, Loader2, Camera, ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { UPcarLogo } from "@/components/ui/UPcarLogo";
+import { BiometricSetup } from "@/components/auth/BiometricSetup";
 
 async function compressPhoto(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -42,13 +43,16 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [compressing, setCompressing] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+
+  const [biometricData, setBiometricData] = useState<{ token: string; email: string } | null>(null);
+  const [pendingRoute, setPendingRoute] = useState<string | null>(null);
+
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
 
   const registerMutation = useRegister();
 
-  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handlePhotoFile = async (file: File) => {
     setCompressing(true);
     try {
       const compressed = await compressPhoto(file);
@@ -58,6 +62,13 @@ export default function Register() {
     } finally {
       setCompressing(false);
     }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await handlePhotoFile(file);
+    e.target.value = "";
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -73,7 +84,6 @@ export default function Register() {
       { data: { name, email, phone, password, role } },
       {
         onSuccess: async (data) => {
-          // Upload avatar right after registration
           try {
             const token = data.token;
             await fetch("/api/users/me/avatar", {
@@ -81,15 +91,17 @@ export default function Register() {
               headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
               body: JSON.stringify({ avatarUrl: photoPreview }),
             });
-            // Merge avatarUrl into user object before login
             login(token, { ...data.user, avatarUrl: photoPreview });
+            const route = role === "driver" ? "/driver/profile" : "/passenger";
+            setPendingRoute(route);
+            setBiometricData({ token, email });
           } catch {
             login(data.token, data.user);
-          }
-          if (role === "driver") {
-            setLocation("/driver/profile");
-          } else {
-            setLocation("/passenger");
+            if (role === "driver") {
+              setLocation("/driver/profile");
+            } else {
+              setLocation("/passenger");
+            }
           }
         },
         onError: (error) => {
@@ -103,97 +115,139 @@ export default function Register() {
     );
   };
 
+  const handleBiometricDone = () => {
+    setBiometricData(null);
+    if (pendingRoute) setLocation(pendingRoute);
+  };
+
   const roleColor = selectedRole === "driver" ? "text-accent" : "text-primary";
   const isLoading = registerMutation.isPending || compressing;
 
   return (
-    <div className="min-h-[100dvh] flex flex-col items-center justify-center p-4 bg-background">
-      <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-300 my-8">
-        <Button
-          variant="ghost"
-          className="mb-4 gap-2 text-muted-foreground"
-          onClick={() => setLocation("/")}
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Voltar
-        </Button>
+    <>
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center p-4 bg-background">
+        <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-300 my-8">
+          <Button
+            variant="ghost"
+            className="mb-4 gap-2 text-muted-foreground"
+            onClick={() => setLocation("/")}
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar
+          </Button>
 
-        <Card className="border-border">
-          <CardHeader className="space-y-2 text-center">
-            <div className="flex justify-center mb-2">
-              <UPcarLogo size={48} />
-            </div>
-            <CardTitle className="text-2xl font-bold tracking-tight">
-              Cadastro {selectedRole && <span className={roleColor}>como {selectedRole === "driver" ? "Motorista" : "Passageiro"}</span>}
-            </CardTitle>
-            <CardDescription>Crie sua conta para começar a usar</CardDescription>
-          </CardHeader>
+          <Card className="border-border">
+            <CardHeader className="space-y-2 text-center">
+              <div className="flex justify-center mb-2">
+                <UPcarLogo size={48} />
+              </div>
+              <CardTitle className="text-2xl font-bold tracking-tight">
+                Cadastro {selectedRole && <span className={roleColor}>como {selectedRole === "driver" ? "Motorista" : "Passageiro"}</span>}
+              </CardTitle>
+              <CardDescription>Crie sua conta para começar a usar</CardDescription>
+            </CardHeader>
 
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
-              {/* Photo upload — required */}
-              <div className="flex flex-col items-center gap-2">
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*"
-                  capture="user"
-                  className="hidden"
-                  onChange={handlePhoto}
-                />
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-dashed border-border hover:border-primary transition-colors bg-secondary/50 flex items-center justify-center"
-                >
-                  {photoPreview ? (
-                    <img src={photoPreview} alt="Foto de perfil" className="w-full h-full object-cover" />
-                  ) : compressing ? (
-                    <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
-                  ) : (
-                    <Camera className="w-8 h-8 text-muted-foreground" />
-                  )}
-                  <div className="absolute bottom-0 inset-x-0 bg-black/50 py-1 text-[10px] text-white text-center">
-                    {photoPreview ? "Trocar" : "Adicionar"}
+            <form onSubmit={handleSubmit}>
+              <CardContent className="space-y-4">
+                {/* Foto de perfil — obrigatória */}
+                <div className="flex flex-col items-center gap-3">
+                  <input
+                    ref={cameraRef}
+                    type="file"
+                    accept="image/*"
+                    capture="user"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                  <input
+                    ref={galleryRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+
+                  <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-dashed border-border bg-secondary/50 flex items-center justify-center">
+                    {photoPreview ? (
+                      <img src={photoPreview} alt="Foto de perfil" className="w-full h-full object-cover" />
+                    ) : compressing ? (
+                      <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
+                    ) : (
+                      <Camera className="w-8 h-8 text-muted-foreground" />
+                    )}
                   </div>
-                </button>
-                <p className="text-xs text-muted-foreground">
-                  Foto de perfil <span className="text-destructive">*</span>
-                </p>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome completo</Label>
-                <Input id="name" required value={name} onChange={(e) => setName(e.target.value)} className="bg-secondary/50 border-border" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="bg-secondary/50 border-border" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Celular</Label>
-                <Input id="phone" type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} className="bg-secondary/50 border-border" placeholder="(11) 99999-9999" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className="bg-secondary/50 border-border" />
-              </div>
-            </CardContent>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 text-xs"
+                      onClick={() => cameraRef.current?.click()}
+                      disabled={compressing}
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      Câmera
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 text-xs"
+                      onClick={() => galleryRef.current?.click()}
+                      disabled={compressing}
+                    >
+                      <ImageIcon className="w-3.5 h-3.5" />
+                      Galeria
+                    </Button>
+                  </div>
 
-            <CardFooter className="flex flex-col gap-4">
-              <Button type="submit" className="w-full h-12 text-lg font-medium" disabled={isLoading} variant="default">
-                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Cadastrar"}
-              </Button>
-              <div className="text-sm text-center text-muted-foreground">
-                Já tem uma conta?{" "}
-                <Link href="/auth/login" className={`font-semibold hover:underline ${roleColor}`}>
-                  Fazer login
-                </Link>
-              </div>
-            </CardFooter>
-          </form>
-        </Card>
+                  <p className="text-xs text-muted-foreground">
+                    Foto de perfil <span className="text-destructive">*</span>
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome completo</Label>
+                  <Input id="name" required value={name} onChange={(e) => setName(e.target.value)} className="bg-secondary/50 border-border" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">E-mail</Label>
+                  <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="bg-secondary/50 border-border" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Celular</Label>
+                  <Input id="phone" type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} className="bg-secondary/50 border-border" placeholder="(11) 99999-9999" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Senha</Label>
+                  <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className="bg-secondary/50 border-border" />
+                </div>
+              </CardContent>
+
+              <CardFooter className="flex flex-col gap-4">
+                <Button type="submit" className="w-full h-12 text-lg font-medium" disabled={isLoading} variant="default">
+                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Cadastrar"}
+                </Button>
+                <div className="text-sm text-center text-muted-foreground">
+                  Já tem uma conta?{" "}
+                  <Link href="/auth/login" className={`font-semibold hover:underline ${roleColor}`}>
+                    Fazer login
+                  </Link>
+                </div>
+              </CardFooter>
+            </form>
+          </Card>
+        </div>
       </div>
-    </div>
+
+      {biometricData && (
+        <BiometricSetup
+          token={biometricData.token}
+          email={biometricData.email}
+          onDone={handleBiometricDone}
+        />
+      )}
+    </>
   );
 }

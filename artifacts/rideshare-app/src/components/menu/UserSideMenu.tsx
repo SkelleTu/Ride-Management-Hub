@@ -15,13 +15,37 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import {
   Menu, Star, Car, User, Shield, Search, LogOut, Sun, Moon,
   Type, Eye, Info, ChevronRight, MapPin, Calendar, Phone,
-  Mail, Hash, Clock, CheckCircle, XCircle, X,
+  Mail, Hash, Clock, CheckCircle, XCircle, X, Camera, ImageIcon, Loader2, Pencil,
 } from "lucide-react";
 import {
   useListDrivers, getListDriversQueryKey, ListDriversStatus,
   useListUsers, getListUsersQueryKey, ListUsersRole,
 } from "@workspace/api-client-react";
 import type { User as UserType, DriverProfile } from "@workspace/api-client-react";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
+import { getGetMeQueryKey } from "@workspace/api-client-react";
+
+async function compressPhoto(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const size = 240;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d")!;
+      const side = Math.min(img.width, img.height);
+      const sx = (img.width - side) / 2;
+      const sy = (img.height - side) / 2;
+      ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
 
 const ROLE_LABELS: Record<string, { label: string; color: string }> = {
   passenger: { label: "Passageiro", color: "bg-blue-500/20 text-blue-400" },
@@ -47,13 +71,82 @@ function StarRating({ value }: { value: number }) {
 }
 
 function ProfileCard({ user }: { user: UserType }) {
+  const { login } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [uploading, setUploading] = useState(false);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
+
   const roleInfo = ROLE_LABELS[user.role] ?? { label: user.role, color: "" };
+
+  const handlePhotoFile = async (file: File) => {
+    setUploading(true);
+    try {
+      const compressed = await compressPhoto(file);
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/users/me/avatar", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ avatarUrl: compressed }),
+      });
+      if (!res.ok) throw new Error("Erro ao salvar foto");
+      const updated = await res.json();
+      login(token!, { ...updated });
+      queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+      toast({ title: "Foto atualizada com sucesso!" });
+    } catch {
+      toast({ title: "Erro ao atualizar foto", variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await handlePhotoFile(file);
+    e.target.value = "";
+  };
+
   return (
     <div className="flex items-center gap-3 p-4 bg-secondary/50 rounded-xl">
-      <Avatar className="w-16 h-16 shrink-0">
-        <AvatarImage src={user.avatarUrl ?? undefined} alt={user.name} className="object-cover" />
-        <AvatarFallback className={`text-lg font-bold ${roleInfo.color}`}>{user.name.charAt(0)}</AvatarFallback>
-      </Avatar>
+      <input ref={cameraRef} type="file" accept="image/*" capture="user" className="hidden" onChange={handleChange} />
+      <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={handleChange} />
+
+      <div className="relative shrink-0">
+        <Avatar className="w-16 h-16">
+          <AvatarImage src={user.avatarUrl ?? undefined} alt={user.name} className="object-cover" />
+          <AvatarFallback className={`text-lg font-bold ${roleInfo.color}`}>{user.name.charAt(0)}</AvatarFallback>
+        </Avatar>
+        {uploading && (
+          <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
+            <Loader2 className="w-5 h-5 text-white animate-spin" />
+          </div>
+        )}
+        {!uploading && (
+          <div className="absolute -bottom-1 -right-1 flex gap-0.5">
+            <button
+              onClick={() => cameraRef.current?.click()}
+              className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shadow-md border-2 border-background"
+              title="Tirar foto"
+            >
+              <Camera className="w-3 h-3 text-primary-foreground" />
+            </button>
+            <button
+              onClick={() => galleryRef.current?.click()}
+              className="w-6 h-6 rounded-full bg-secondary border border-border flex items-center justify-center shadow-md"
+              title="Escolher da galeria"
+            >
+              <ImageIcon className="w-3 h-3 text-foreground" />
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="flex-1 min-w-0">
         <div className="font-bold text-base truncate">{user.name}</div>
         <div className="text-xs text-muted-foreground truncate">{user.email}</div>
@@ -61,6 +154,7 @@ function ProfileCard({ user }: { user: UserType }) {
           <Badge className={`text-xs px-2 py-0 ${roleInfo.color}`}>{roleInfo.label}</Badge>
           {user.rating != null && <StarRating value={user.rating} />}
         </div>
+        <p className="text-[10px] text-muted-foreground mt-1">Toque nos ícones para trocar a foto</p>
       </div>
     </div>
   );

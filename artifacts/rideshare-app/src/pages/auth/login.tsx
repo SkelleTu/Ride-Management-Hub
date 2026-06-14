@@ -6,19 +6,50 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Fingerprint } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { UPcarLogo } from "@/components/ui/UPcarLogo";
+import {
+  getBiometricEmail,
+  authenticateBiometric,
+  browserSupportsWebAuthn,
+} from "@/lib/useBiometric";
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const { login, selectedRole } = useAuth();
   const { toast } = useToast();
-  
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [bioLoading, setBioLoading] = useState(false);
 
   const loginMutation = useLogin();
+
+  const biometricEmail = getBiometricEmail();
+  const canUseBiometric = browserSupportsWebAuthn() && !!biometricEmail;
+
+  const redirectAfterLogin = async (token: string, user: any) => {
+    login(token, user);
+    if (user.role === "admin") {
+      setLocation("/admin");
+    } else if (user.role === "driver") {
+      setLocation("/driver");
+    } else {
+      try {
+        const r = await fetch("/api/rides", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (r.ok) {
+          const rides = await r.json();
+          const activeStatuses = ["open", "negotiating", "accepted", "in_progress"];
+          const active = rides.find((ride: any) => activeStatuses.includes(ride.status));
+          if (active) { setLocation(`/passenger/ride/${active.id}`); return; }
+        }
+      } catch {}
+      setLocation("/passenger");
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,29 +57,7 @@ export default function Login() {
       { data: { email, password } },
       {
         onSuccess: async (data) => {
-          login(data.token, data.user);
-          if (data.user.role === "admin") {
-            setLocation("/admin");
-          } else if (data.user.role === "driver") {
-            setLocation("/driver");
-          } else {
-            // For passengers: check if there's an active ride to resume
-            try {
-              const r = await fetch("/api/rides", {
-                headers: { Authorization: `Bearer ${data.token}` },
-              });
-              if (r.ok) {
-                const rides = await r.json();
-                const activeStatuses = ["open", "negotiating", "accepted", "in_progress"];
-                const active = rides.find((ride: any) => activeStatuses.includes(ride.status));
-                if (active) {
-                  setLocation(`/passenger/ride/${active.id}`);
-                  return;
-                }
-              }
-            } catch {}
-            setLocation("/passenger");
-          }
+          await redirectAfterLogin(data.token, data.user);
         },
         onError: (error) => {
           toast({
@@ -61,20 +70,44 @@ export default function Login() {
     );
   };
 
+  const handleBiometric = async () => {
+    if (!biometricEmail) return;
+    setBioLoading(true);
+    try {
+      const result = await authenticateBiometric(biometricEmail);
+      if (result) {
+        await redirectAfterLogin(result.token, result.user);
+      } else {
+        toast({ title: "Biometria não reconhecida", variant: "destructive" });
+      }
+    } catch (err: any) {
+      const msg: string = err?.message ?? "";
+      if (!msg.includes("cancelled") && !msg.toLowerCase().includes("not allowed")) {
+        toast({
+          title: "Falha na autenticação biométrica",
+          description: msg || "Tente novamente ou use sua senha.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setBioLoading(false);
+    }
+  };
+
   const roleColor = selectedRole === "driver" ? "text-accent" : "text-primary";
 
   return (
     <div className="min-h-[100dvh] flex flex-col items-center justify-center p-4 bg-background">
       <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-300">
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           className="mb-4 gap-2 text-muted-foreground"
           onClick={() => setLocation("/")}
         >
           <ArrowLeft className="w-4 h-4" />
           Voltar
         </Button>
-        
+
         <Card className="border-border">
           <CardHeader className="space-y-2 text-center">
             <div className="flex justify-center mb-2">
@@ -83,18 +116,17 @@ export default function Login() {
             <CardTitle className="text-2xl font-bold tracking-tight">
               Login {selectedRole && <span className={roleColor}>como {selectedRole === "driver" ? "Motorista" : "Passageiro"}</span>}
             </CardTitle>
-            <CardDescription>
-              Insira suas credenciais para continuar
-            </CardDescription>
+            <CardDescription>Insira suas credenciais para continuar</CardDescription>
           </CardHeader>
+
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="seu@email.com" 
+                <Label htmlFor="email">E-mail</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="seu@email.com"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -103,9 +135,9 @@ export default function Login() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Senha</Label>
-                <Input 
-                  id="password" 
-                  type="password" 
+                <Input
+                  id="password"
+                  type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -113,15 +145,46 @@ export default function Login() {
                 />
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col gap-4">
-              <Button 
-                type="submit" 
+
+            <CardFooter className="flex flex-col gap-3">
+              <Button
+                type="submit"
                 className="w-full h-12 text-lg font-medium"
-                disabled={loginMutation.isPending}
+                disabled={loginMutation.isPending || bioLoading}
                 variant="default"
               >
                 {loginMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Entrar"}
               </Button>
+
+              {canUseBiometric && (
+                <>
+                  <div className="flex items-center gap-3 w-full">
+                    <div className="flex-1 h-px bg-border" />
+                    <span className="text-xs text-muted-foreground">ou</span>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-12 gap-2 text-base font-medium"
+                    onClick={handleBiometric}
+                    disabled={loginMutation.isPending || bioLoading}
+                  >
+                    {bioLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Fingerprint className="w-5 h-5" />
+                    )}
+                    {bioLoading ? "Aguardando biometria..." : "Entrar com digital"}
+                  </Button>
+
+                  <p className="text-xs text-center text-muted-foreground">
+                    Conta: <span className="font-medium text-foreground">{biometricEmail}</span>
+                  </p>
+                </>
+              )}
+
               <div className="text-sm text-center text-muted-foreground">
                 Não tem uma conta?{" "}
                 <Link href="/auth/register" className={`font-semibold hover:underline ${roleColor}`}>
