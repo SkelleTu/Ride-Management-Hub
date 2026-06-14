@@ -25,10 +25,14 @@ export function WhatsAppActivation({ name, phone, role, token, onDone }: Props) 
         const msg = sandboxCode
           ? `join ${sandboxCode}`
           : `Olá! Acabei de me cadastrar no UPcar como ${role === "driver" ? "motorista" : "passageiro"}.`;
-        setWhatsappUrl(`https://wa.me/${number}?text=${encodeURIComponent(msg)}`);
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const url = isMobile
+          ? `https://wa.me/${number}?text=${encodeURIComponent(msg)}`
+          : `https://web.whatsapp.com/send/?phone=${number}&text=${encodeURIComponent(msg)}&type=phone_number&app_absent=0`;
+        setWhatsappUrl(url);
       })
       .catch(() => {
-        setWhatsappUrl(`https://wa.me/14155238886`);
+        setWhatsappUrl(`https://web.whatsapp.com/send/?phone=14155238886`);
       });
   }, [role]);
 
@@ -68,13 +72,11 @@ export function WhatsAppActivation({ name, phone, role, token, onDone }: Props) 
         <UPcarLogo size={48} />
 
         {sent ? (
-          <>
-            <div className="flex flex-col items-center gap-3">
-              <CheckCircle2 className="w-16 h-16 text-green-500 animate-in zoom-in duration-300" />
-              <h2 className="text-2xl font-bold">Tudo pronto!</h2>
-              <p className="text-muted-foreground">Você receberá uma mensagem de boas-vindas no WhatsApp agora. 🎉</p>
-            </div>
-          </>
+          <div className="flex flex-col items-center gap-3">
+            <CheckCircle2 className="w-16 h-16 text-green-500 animate-in zoom-in duration-300" />
+            <h2 className="text-2xl font-bold">Tudo pronto!</h2>
+            <p className="text-muted-foreground">Você receberá uma mensagem de boas-vindas no WhatsApp agora. 🎉</p>
+          </div>
         ) : (
           <>
             <div className="flex flex-col items-center gap-2">
@@ -123,16 +125,7 @@ export function WhatsAppActivation({ name, phone, role, token, onDone }: Props) 
                 </Button>
               )}
 
-              {error && (
-                <p className="text-sm text-destructive">{error}</p>
-              )}
-
-              <button
-                className="text-xs text-muted-foreground underline underline-offset-2 mt-1"
-                onClick={onDone}
-              >
-                Pular por agora
-              </button>
+              {error && <p className="text-sm text-destructive">{error}</p>}
             </div>
 
             <div className="bg-secondary/50 rounded-xl p-4 text-left w-full">
