@@ -9,6 +9,7 @@ import { offersRouter } from "./offers";
 import { adminRouter } from "./admin";
 import { feedbacksRouter } from "./feedbacks";
 import proxyRouter from "./proxy";
+import { dispatchRouter } from "./dispatch";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use("/rides/:id/feedback", feedbacksRouter);
 router.use("/rides/:rideId/offers", offersRouter);
 router.use("/admin", adminRouter);
 router.use("/proxy", proxyRouter);
+router.use("/dispatch", dispatchRouter);
 
 export default router;
