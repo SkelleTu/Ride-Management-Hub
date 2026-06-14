@@ -121,7 +121,8 @@ function MapView({
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
 
-    const map = L.map(mapRef.current, { zoomControl: true }).setView([-23.5505, -46.6333], 13);
+    const map = L.map(mapRef.current, { zoomControl: false }).setView([-23.5505, -46.6333], 13);
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
       subdomains: 'abcd', maxZoom: 20
