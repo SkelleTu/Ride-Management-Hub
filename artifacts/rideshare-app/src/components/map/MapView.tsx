@@ -152,7 +152,7 @@ function MapCompass() {
   const size    = isDesktop ? 54 : 40;
   const svgSize = isDesktop ? 38 : 28;
   const style: React.CSSProperties = isDesktop
-    ? { position: 'absolute', bottom: '10px', right: '50px', zIndex: 1000 }
+    ? { position: 'absolute', bottom: '19px', right: '50px', zIndex: 1000 }
     : { position: 'absolute', bottom: '90px', right: '10px', zIndex: 1000 };
 
   return (
