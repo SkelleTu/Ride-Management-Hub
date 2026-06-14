@@ -168,63 +168,109 @@ function MapCompass({ mouseHeading = null }: MapCompassProps) {
     ? { position: 'absolute', bottom: '19px', right: '50px', zIndex: 1000 }
     : { position: 'absolute', bottom: '90px', right: '10px', zIndex: 1000 };
 
-  const label = usingMouse
-    ? `${Math.round(bearing)}° ${bearingLabel(bearing)}`
-    : devActive ? `${Math.round(devHeading)}° N` : 'Bússola';
+  const titleTip = needsPermission
+    ? 'Toque para ativar a bússola'
+    : usingMouse
+      ? `${Math.round(bearing)}° ${bearingLabel(bearing)}`
+      : devActive ? `${Math.round(devHeading)}° Norte` : 'Bússola';
+
+  // Font that matches the bold condensed logo style
+  const displayFont = "'Inter', 'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif";
 
   return (
+    // Outer wrapper: positions the whole group (label + circle)
     <div
-      onClick={needsPermission ? requestPermission : undefined}
-      title={needsPermission ? 'Toque para ativar a bússola' : label}
       style={{
         ...posStyle,
-        width: `${size}px`,
-        height: `${size}px`,
-        borderRadius: '50%',
-        background: usingMouse ? 'rgba(10,10,18,0.90)' : 'rgba(15,15,20,0.82)',
-        border: `1.5px solid ${usingMouse ? 'rgba(239,68,68,0.45)' : 'rgba(255,255,255,0.18)'}`,
-        backdropFilter: 'blur(6px)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        cursor: needsPermission ? 'pointer' : 'default',
-        boxShadow: `0 2px 8px rgba(0,0,0,0.5)${usingMouse ? ', 0 0 10px rgba(239,68,68,0.15)' : ''}`,
-        transition: 'width 0.2s, height 0.2s, border-color 0.2s, box-shadow 0.2s',
-        gap: '2px',
+        gap: '5px',
+        width: 'max-content',
       }}
     >
-      <svg
-        width={svgSize}
-        height={svgSize}
-        viewBox="0 0 28 28"
-        style={{ transform: `rotate(${svgRotation}deg)`, transition: 'transform 0.08s linear' }}
+      {/* Direction label — above the compass, outside the circle */}
+      <div
+        style={{
+          minHeight: '18px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '1px',
+          opacity: usingMouse ? 1 : 0,
+          transition: 'opacity 0.2s ease',
+          pointerEvents: 'none',
+        }}
       >
-        {[0,45,90,135,180,225,270,315].map((deg) => (
-          <line
-            key={deg}
-            x1="14" y1="3.5" x2="14" y2={deg % 90 === 0 ? '5.5' : '5'}
-            stroke="rgba(255,255,255,0.3)"
-            strokeWidth={deg % 90 === 0 ? '1.5' : '1'}
-            transform={`rotate(${deg} 14 14)`}
-          />
-        ))}
-        <polygon points="14,4 11.5,14 14,12.5 16.5,14" fill="#ef4444" />
-        <polygon points="14,24 11.5,14 14,15.5 16.5,14" fill="rgba(255,255,255,0.55)" />
-        <circle cx="14" cy="14" r="2" fill="rgba(255,255,255,0.9)" />
-        {!usingMouse && (
-          <text x="14" y="10" textAnchor="middle" fontSize="4" fontWeight="bold" fill="#ef4444" fontFamily="sans-serif">N</text>
-        )}
-      </svg>
-      {/* Bearing readout — desktop mouse mode only */}
-      {usingMouse && isDesktop && (
         <div style={{
-          fontSize: '8px', fontWeight: 700, color: '#ef4444',
-          fontFamily: 'monospace', lineHeight: 1, letterSpacing: '0.02em',
+          fontSize: '15px',
+          fontWeight: 900,
+          fontFamily: displayFont,
+          color: '#ef4444',
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          lineHeight: 1,
+          textShadow: '0 1px 6px rgba(0,0,0,0.9), 0 0 12px rgba(239,68,68,0.4)',
         }}>
           {bearingLabel(bearing)}
         </div>
-      )}
+        <div style={{
+          fontSize: '9px',
+          fontWeight: 700,
+          fontFamily: displayFont,
+          color: 'rgba(255,255,255,0.55)',
+          letterSpacing: '0.08em',
+          lineHeight: 1,
+          textShadow: '0 1px 3px rgba(0,0,0,0.9)',
+        }}>
+          {Math.round(bearing)}°
+        </div>
+      </div>
+
+      {/* Compass circle */}
+      <div
+        onClick={needsPermission ? requestPermission : undefined}
+        title={titleTip}
+        style={{
+          width: `${size}px`,
+          height: `${size}px`,
+          borderRadius: '50%',
+          background: usingMouse ? 'rgba(10,10,18,0.90)' : 'rgba(15,15,20,0.82)',
+          border: `1.5px solid ${usingMouse ? 'rgba(239,68,68,0.45)' : 'rgba(255,255,255,0.18)'}`,
+          backdropFilter: 'blur(6px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: needsPermission ? 'pointer' : 'default',
+          boxShadow: `0 2px 8px rgba(0,0,0,0.5)${usingMouse ? ', 0 0 12px rgba(239,68,68,0.2)' : ''}`,
+          transition: 'border-color 0.2s, box-shadow 0.2s',
+          flexShrink: 0,
+        }}
+      >
+        <svg
+          width={svgSize}
+          height={svgSize}
+          viewBox="0 0 28 28"
+          style={{ transform: `rotate(${svgRotation}deg)`, transition: 'transform 0.08s linear' }}
+        >
+          {[0,45,90,135,180,225,270,315].map((deg) => (
+            <line
+              key={deg}
+              x1="14" y1="3.5" x2="14" y2={deg % 90 === 0 ? '5.5' : '5'}
+              stroke="rgba(255,255,255,0.3)"
+              strokeWidth={deg % 90 === 0 ? '1.5' : '1'}
+              transform={`rotate(${deg} 14 14)`}
+            />
+          ))}
+          <polygon points="14,4 11.5,14 14,12.5 16.5,14" fill="#ef4444" />
+          <polygon points="14,24 11.5,14 14,15.5 16.5,14" fill="rgba(255,255,255,0.55)" />
+          <circle cx="14" cy="14" r="2" fill="rgba(255,255,255,0.9)" />
+          {/* Static N label when not in mouse mode */}
+          {!usingMouse && (
+            <text x="14" y="10" textAnchor="middle" fontSize="4" fontWeight="bold" fill="#ef4444" fontFamily="sans-serif">N</text>
+          )}
+        </svg>
+      </div>
     </div>
   );
 }
