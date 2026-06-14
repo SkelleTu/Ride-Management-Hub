@@ -24,9 +24,6 @@ L.Icon.Default.mergeOptions({
 });
 
 function makePhotoIcon(photoUrl: string, borderColor: string, label?: string, draggable?: boolean) {
-  const dragHint = draggable
-    ? `<div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10px;opacity:0.7;white-space:nowrap;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.8);">✥ arrastar</div>`
-    : '';
   const labelHtml = label
     ? `<div style="
         position:absolute;top:46px;left:50%;transform:translateX(-50%);
@@ -49,7 +46,6 @@ function makePhotoIcon(photoUrl: string, borderColor: string, label?: string, dr
         <img src="${photoUrl}" style="width:100%;height:100%;object-fit:cover" />
       </div>
       ${labelHtml}
-      ${dragHint}
     </div>`,
     iconSize: [42, label ? 64 : 42],
     iconAnchor: [21, 21],
@@ -58,9 +54,6 @@ function makePhotoIcon(photoUrl: string, borderColor: string, label?: string, dr
 }
 
 function makeFallbackIcon(color: string, svgPath: string, label?: string, draggable?: boolean) {
-  const dragHint = draggable
-    ? `<div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10px;opacity:0.7;white-space:nowrap;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.8);">✥ arrastar</div>`
-    : '';
   const labelHtml = label
     ? `<div style="
         position:absolute;top:46px;left:50%;transform:translateX(-50%);
@@ -86,7 +79,6 @@ function makeFallbackIcon(color: string, svgPath: string, label?: string, dragga
         </svg>
       </div>
       ${labelHtml}
-      ${dragHint}
     </div>`,
     iconSize: [42, label ? 64 : 42],
     iconAnchor: [21, 21],
