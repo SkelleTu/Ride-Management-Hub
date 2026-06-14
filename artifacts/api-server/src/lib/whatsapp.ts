@@ -13,8 +13,12 @@ function getClient() {
 }
 
 function getFromNumber() {
-  const from = process.env.TWILIO_WHATSAPP_FROM;
-  if (!from) throw new Error("TWILIO_WHATSAPP_FROM é obrigatório");
+  const raw = process.env.TWILIO_WHATSAPP_FROM;
+  if (!raw) throw new Error("TWILIO_WHATSAPP_FROM é obrigatório");
+  const from = raw.trim();
+  if (!from.startsWith("whatsapp:")) {
+    return `whatsapp:${from.startsWith("+") ? from : `+${from}`}`;
+  }
   return from;
 }
 
