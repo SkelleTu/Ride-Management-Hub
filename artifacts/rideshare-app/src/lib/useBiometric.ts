@@ -6,6 +6,15 @@ import {
 
 export { browserSupportsWebAuthn };
 
+export async function deviceHasBiometric(): Promise<boolean> {
+  try {
+    if (!browserSupportsWebAuthn()) return false;
+    return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  } catch {
+    return false;
+  }
+}
+
 const BIOMETRIC_KEY = "upcar_biometric_email";
 
 export function getBiometricEmail(): string | null {

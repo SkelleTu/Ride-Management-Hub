@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useLogin } from "@workspace/api-client-react";
@@ -12,7 +12,7 @@ import { UPcarLogo } from "@/components/ui/UPcarLogo";
 import {
   getBiometricEmail,
   authenticateBiometric,
-  browserSupportsWebAuthn,
+  deviceHasBiometric,
 } from "@/lib/useBiometric";
 
 export default function Login() {
@@ -23,11 +23,16 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [bioLoading, setBioLoading] = useState(false);
+  const [canUseBiometric, setCanUseBiometric] = useState(false);
 
   const loginMutation = useLogin();
 
   const biometricEmail = getBiometricEmail();
-  const canUseBiometric = browserSupportsWebAuthn() && !!biometricEmail;
+
+  useEffect(() => {
+    if (!biometricEmail) return;
+    deviceHasBiometric().then(setCanUseBiometric);
+  }, [biometricEmail]);
 
   const redirectAfterLogin = async (token: string, user: any) => {
     login(token, user);

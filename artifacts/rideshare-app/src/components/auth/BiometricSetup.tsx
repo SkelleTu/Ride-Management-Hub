@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Fingerprint, Loader2, CheckCircle, X } from "lucide-react";
-import { registerBiometric, setBiometricEmail, browserSupportsWebAuthn } from "@/lib/useBiometric";
+import { registerBiometric, setBiometricEmail, deviceHasBiometric } from "@/lib/useBiometric";
 import { useToast } from "@/hooks/use-toast";
 
 interface BiometricSetupProps {
@@ -11,15 +11,39 @@ interface BiometricSetupProps {
   onDone: () => void;
 }
 
+function isSilentBiometricError(err: any): boolean {
+  const msg: string = (err?.message ?? err?.name ?? "").toLowerCase();
+  return (
+    msg.includes("not allowed") ||
+    msg.includes("notallowederror") ||
+    msg.includes("cancelled") ||
+    msg.includes("canceled") ||
+    msg.includes("not enabled in this document") ||
+    msg.includes("permissions policy") ||
+    msg.includes("publickey-credentials") ||
+    msg.includes("cross-origin") ||
+    msg.includes("security error") ||
+    err?.name === "NotAllowedError" ||
+    err?.name === "SecurityError"
+  );
+}
+
 export function BiometricSetup({ token, email, onDone }: BiometricSetupProps) {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [hasBiometric, setHasBiometric] = useState(false);
   const { toast } = useToast();
 
-  if (!browserSupportsWebAuthn()) {
-    onDone();
-    return null;
-  }
+  useEffect(() => {
+    deviceHasBiometric().then((has) => {
+      setHasBiometric(has);
+      setChecking(false);
+      if (!has) onDone();
+    });
+  }, []);
+
+  if (checking || !hasBiometric) return null;
 
   const handleRegister = async () => {
     setLoading(true);
@@ -31,17 +55,14 @@ export function BiometricSetup({ token, email, onDone }: BiometricSetupProps) {
         setTimeout(onDone, 1500);
       }
     } catch (err: any) {
-      const msg: string = err?.message ?? "";
-      if (msg.includes("cancelled") || msg.includes("NotAllowedError") || msg.toLowerCase().includes("not allowed")) {
-        onDone();
-      } else {
+      if (!isSilentBiometricError(err)) {
         toast({
           title: "Biometria não cadastrada",
-          description: msg || "Tente novamente mais tarde.",
+          description: err?.message || "Tente novamente mais tarde.",
           variant: "destructive",
         });
-        onDone();
       }
+      onDone();
     } finally {
       setLoading(false);
     }
