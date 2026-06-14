@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { RegisterBody, LoginBody } from "@workspace/api-zod";
 import { hashPassword, generateToken, storeToken, removeToken, requireAuth } from "../lib/auth";
 import { activityLogTable } from "@workspace/db";
+import { notifyNewRegistration } from "../lib/whatsapp";
 
 export const authRouter = Router();
 
@@ -35,6 +36,13 @@ authRouter.post("/register", async (req, res) => {
     userId: user.id,
     userName: user.name,
   });
+  notifyNewRegistration({
+    name: user.name,
+    email: user.email,
+    phone: user.phone ?? "",
+    role: user.role as "passenger" | "driver",
+  }).catch(() => {});
+
   const token = generateToken(user.id);
   storeToken(token, user.id);
   const { passwordHash: _, ...safeUser } = user;
