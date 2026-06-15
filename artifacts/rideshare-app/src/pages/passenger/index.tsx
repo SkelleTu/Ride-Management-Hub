@@ -657,30 +657,12 @@ export default function PassengerHome() {
           </div>
 
           {/* Map pin mode selector */}
-          <div className="flex items-center gap-1.5 bg-secondary/50 rounded-xl p-1 border border-border/60">
-            <button
-              onClick={() => setActiveField("origin")}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-medium transition-all ${
-                activeField === "origin"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <div className={`w-2 h-2 rounded-full shrink-0 ${activeField === "origin" ? "bg-primary-foreground" : "bg-primary"}`} />
-              {origin ? "Embarque ✓" : "Pontuar embarque"}
-            </button>
-            <button
-              onClick={() => setActiveField("destination")}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-medium transition-all ${
-                activeField === "destination"
-                  ? "bg-accent text-accent-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Navigation className={`w-3 h-3 shrink-0 ${activeField === "destination" ? "text-accent-foreground" : "text-accent"}`} />
-              {destination ? "Destino ✓" : "Pontuar destino"}
-            </button>
-          </div>
+          {/* Tap-on-map hint — compact single line, only before addresses are set */}
+          {(!origin || !destination) && (
+            <p className="text-[10px] text-muted-foreground/60 text-center">
+              Toque no mapa para marcar o ponto de {!origin ? "embarque" : "destino"}
+            </p>
+          )}
           {/* Destination */}
           <div className="space-y-1.5">
             <div className="relative">
@@ -931,33 +913,37 @@ export default function PassengerHome() {
             </div>
           )}
 
-          {/* Price field */}
-          <div className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2.5 border border-border focus-within:border-primary transition-colors">
-            <span className="text-primary font-semibold text-sm shrink-0">R$</span>
-            <Input
-              data-testid="input-price"
-              type="number"
-              placeholder={distanceKm ? "Preço calculado automaticamente" : "Sua oferta de preço"}
-              value={offeredPrice}
-              onChange={(e) => setOfferedPrice(e.target.value)}
-              className="border-none bg-transparent p-0 h-auto text-sm focus-visible:ring-0"
-            />
-          </div>
+          {/* Price + submit — only when both points are set */}
+          {origin && destination && (
+            <>
+              <div className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2.5 border border-border focus-within:border-primary transition-colors">
+                <span className="text-primary font-semibold text-sm shrink-0">R$</span>
+                <Input
+                  data-testid="input-price"
+                  type="number"
+                  placeholder={distanceKm ? "Preço calculado automaticamente" : "Sua oferta de preço"}
+                  value={offeredPrice}
+                  onChange={(e) => setOfferedPrice(e.target.value)}
+                  className="border-none bg-transparent p-0 h-auto text-sm focus-visible:ring-0"
+                />
+              </div>
 
-          <Button
-            data-testid="button-request-ride"
-            onClick={handleSubmit}
-            disabled={
-              !origin || !destination || !offeredPrice || createRide.isPending || isCalculating ||
-              (isScheduling && availability?.driverCount === 0 && !availabilityLoading)
-            }
-            className="w-full h-12 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl"
-          >
-            {createRide.isPending
-              ? (isScheduling ? "Agendando..." : "Solicitando...")
-              : (isScheduling ? "Agendar Corrida" : "Solicitar Corrida")}
-            {!createRide.isPending && <ChevronRight className="ml-1 w-4 h-4" />}
-          </Button>
+              <Button
+                data-testid="button-request-ride"
+                onClick={handleSubmit}
+                disabled={
+                  !offeredPrice || createRide.isPending || isCalculating ||
+                  (isScheduling && availability?.driverCount === 0 && !availabilityLoading)
+                }
+                className="w-full h-12 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl"
+              >
+                {createRide.isPending
+                  ? (isScheduling ? "Agendando..." : "Solicitando...")
+                  : (isScheduling ? "Agendar Corrida" : "Solicitar Corrida")}
+                {!createRide.isPending && <ChevronRight className="ml-1 w-4 h-4" />}
+              </Button>
+            </>
+          )}
 
         </div>
       </div>
