@@ -12,6 +12,7 @@ import { UPcarLogo } from "@/components/ui/UPcarLogo";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import {
   getBiometricEmail,
+  clearBiometricEmail,
   authenticateBiometric,
   deviceHasBiometric,
 } from "@/lib/useBiometric";
@@ -134,7 +135,17 @@ export default function Login() {
         return;
       }
       setBioLoading(false);
-      if (!msg.includes("cancelled") && !msg.includes("not allowed")) {
+      if (msg.includes("not allowed") || msg.includes("no credentials") || msg.includes("no available")) {
+        // Device doesn't have the passkey — clear local flag so button disappears
+        // and user can re-register after logging in with password
+        clearBiometricEmail();
+        setCanUseBiometric(false);
+        toast({
+          title: "Biometria não encontrada neste aparelho",
+          description: "Faça login com sua senha e cadastre a digital novamente.",
+          variant: "destructive",
+        });
+      } else if (!msg.includes("cancelled")) {
         toast({
           title: "Falha na autenticação biométrica",
           description: err?.message || "Tente novamente ou use sua senha.",
