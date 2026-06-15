@@ -105,21 +105,42 @@ export default function Login() {
     try {
       const result = await authenticateBiometric(biometricEmail);
       if (result) {
-        await redirectAfterLogin(result.token, result.user);
+        login(result.token, result.user);
+        const route = await resolveRoute(result.token, result.user);
+        // Use setTimeout to defer navigation away from React render cycle
+        // This prevents insertBefore/removeChild conflicts with WebAuthn DOM cleanup
+        setTimeout(() => setLocation(route), 50);
       } else {
+        setBioLoading(false);
         toast({ title: "Biometria não reconhecida", variant: "destructive" });
       }
     } catch (err: any) {
-      const msg: string = err?.message ?? "";
-      if (!msg.includes("cancelled") && !msg.toLowerCase().includes("not allowed")) {
+      const msg: string = (err?.message ?? "").toLowerCase();
+      // DOM errors from WebAuthn native UI cleanup — check if auth actually worked
+      if (msg.includes("removechild") || msg.includes("insertbefore") || msg.includes("not a child")) {
+        try {
+          const storedToken = localStorage.getItem("token") ?? "";
+          const r = await fetch("/api/auth/me", {
+            headers: { Authorization: `Bearer ${storedToken}` },
+          });
+          if (r.ok) {
+            const user = await r.json();
+            const route = await resolveRoute(storedToken, user);
+            setTimeout(() => setLocation(route), 50);
+            return;
+          }
+        } catch {}
+        setBioLoading(false);
+        return;
+      }
+      setBioLoading(false);
+      if (!msg.includes("cancelled") && !msg.includes("not allowed")) {
         toast({
           title: "Falha na autenticação biométrica",
-          description: msg || "Tente novamente ou use sua senha.",
+          description: err?.message || "Tente novamente ou use sua senha.",
           variant: "destructive",
         });
       }
-    } finally {
-      setBioLoading(false);
     }
   };
 
