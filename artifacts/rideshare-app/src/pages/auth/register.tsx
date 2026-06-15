@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { ArrowLeft, Loader2, Camera, ImageIcon, ChevronRight, MapPin, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { UPcarLogo } from "@/components/ui/UPcarLogo";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { BiometricSetup } from "@/components/auth/BiometricSetup";
 import { WhatsAppActivation } from "@/components/auth/WhatsAppActivation";
 
@@ -355,7 +356,7 @@ export default function Register() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="password">Senha</Label>
-                      <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className="bg-secondary/50 border-border" />
+                      <PasswordInput id="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className="bg-secondary/50 border-border" />
                     </div>
                   </>
                 )}

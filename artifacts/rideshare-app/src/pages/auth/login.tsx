@@ -9,12 +9,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { ArrowLeft, Loader2, Fingerprint } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { UPcarLogo } from "@/components/ui/UPcarLogo";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import {
   getBiometricEmail,
   authenticateBiometric,
   deviceHasBiometric,
 } from "@/lib/useBiometric";
 import { WhatsAppActivation } from "@/components/auth/WhatsAppActivation";
+import { BiometricSetup } from "@/components/auth/BiometricSetup";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -25,10 +27,16 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [bioLoading, setBioLoading] = useState(false);
   const [canUseBiometric, setCanUseBiometric] = useState(false);
-  const [whatsappData, setWhatsappData] = useState<{ name: string; phone: string; role: "passenger" | "driver"; token: string; userId: number } | null>(null);
+
+  const [whatsappData, setWhatsappData] = useState<{
+    name: string; phone: string; role: "passenger" | "driver"; token: string; userId: number;
+  } | null>(null);
+
+  const [biometricData, setBiometricData] = useState<{
+    token: string; email: string; pendingRoute: string;
+  } | null>(null);
 
   const loginMutation = useLogin();
-
   const biometricEmail = getBiometricEmail();
 
   useEffect(() => {
@@ -36,32 +44,42 @@ export default function Login() {
     deviceHasBiometric().then(setCanUseBiometric);
   }, [biometricEmail]);
 
+  // After login succeeds, check if biometric is registered; if not, prompt setup
+  const goToDashboard = (token: string, user: any, route: string) => {
+    if (!getBiometricEmail()) {
+      // Biometric not set up yet — show setup before going to dashboard
+      setBiometricData({ token, email: user.email, pendingRoute: route });
+    } else {
+      setLocation(route);
+    }
+  };
+
+  const resolveRoute = async (token: string, user: any): Promise<string> => {
+    if (user.role === "admin") return "/admin";
+    if (user.role === "driver") return "/driver";
+    try {
+      const r = await fetch("/api/rides", { headers: { Authorization: `Bearer ${token}` } });
+      if (r.ok) {
+        const rides = await r.json();
+        const active = rides.find((ride: any) =>
+          ["open", "negotiating", "accepted", "in_progress"].includes(ride.status)
+        );
+        if (active) return `/passenger/ride/${active.id}`;
+      }
+    } catch {}
+    return "/passenger";
+  };
+
   const redirectAfterLogin = async (token: string, user: any) => {
-    // If WhatsApp not activated yet, show activation screen first
+    // WhatsApp not activated yet → show activation first
     if (user.whatsappActivated === false) {
       login(token, user);
       setWhatsappData({ name: user.name, phone: user.phone, role: user.role, token, userId: user.id });
       return;
     }
     login(token, user);
-    if (user.role === "admin") {
-      setLocation("/admin");
-    } else if (user.role === "driver") {
-      setLocation("/driver");
-    } else {
-      try {
-        const r = await fetch("/api/rides", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (r.ok) {
-          const rides = await r.json();
-          const activeStatuses = ["open", "negotiating", "accepted", "in_progress"];
-          const active = rides.find((ride: any) => activeStatuses.includes(ride.status));
-          if (active) { setLocation(`/passenger/ride/${active.id}`); return; }
-        }
-      } catch {}
-      setLocation("/passenger");
-    }
+    const route = await resolveRoute(token, user);
+    goToDashboard(token, user, route);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -69,9 +87,7 @@ export default function Login() {
     loginMutation.mutate(
       { data: { email, password } },
       {
-        onSuccess: async (data) => {
-          await redirectAfterLogin(data.token, data.user);
-        },
+        onSuccess: async (data) => { await redirectAfterLogin(data.token, data.user); },
         onError: (error) => {
           toast({
             variant: "destructive",
@@ -109,14 +125,17 @@ export default function Login() {
 
   const handleWhatsAppDone = () => {
     if (!whatsappData) return;
+    const { role, token, name } = whatsappData;
     setWhatsappData(null);
-    if (whatsappData.role === "admin") {
-      setLocation("/admin");
-    } else if (whatsappData.role === "driver") {
-      setLocation("/driver");
-    } else {
-      setLocation("/passenger");
-    }
+    const route = role === "admin" ? "/admin" : role === "driver" ? "/driver" : "/passenger";
+    goToDashboard(token, { email: name }, route);
+  };
+
+  const handleBiometricDone = () => {
+    if (!biometricData) return;
+    const route = biometricData.pendingRoute;
+    setBiometricData(null);
+    setLocation(route);
   };
 
   const roleColor = selectedRole === "driver" ? "text-accent" : "text-primary";
@@ -161,9 +180,8 @@ export default function Login() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Senha</Label>
-                  <Input
+                  <PasswordInput
                     id="password"
-                    type="password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -197,12 +215,8 @@ export default function Login() {
                       onClick={handleBiometric}
                       disabled={loginMutation.isPending || bioLoading}
                     >
-                      {bioLoading ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                      ) : (
-                        <Fingerprint className="w-5 h-5" />
-                      )}
-                      {bioLoading ? "Aguardando biometria..." : "Entrar com digital"}
+                      {bioLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Fingerprint className="w-5 h-5" />}
+                      {bioLoading ? "Aguardando biometria..." : "Entrar com digital / Face ID"}
                     </Button>
 
                     <p className="text-xs text-center text-muted-foreground">
@@ -231,6 +245,14 @@ export default function Login() {
           token={whatsappData.token}
           userId={whatsappData.userId}
           onDone={handleWhatsAppDone}
+        />
+      )}
+
+      {biometricData && (
+        <BiometricSetup
+          token={biometricData.token}
+          email={biometricData.email}
+          onDone={handleBiometricDone}
         />
       )}
     </>
