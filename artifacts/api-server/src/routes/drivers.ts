@@ -88,6 +88,32 @@ driversRouter.get("/:id", requireAuth, async (req, res) => {
   res.json({ ...profile, user: { ...safeUser, driverProfile: null } });
 });
 
+driversRouter.patch("/me/status", requireAuth, async (req, res) => {
+  const currentUser = (req as any).user;
+  if (currentUser.role !== "driver") {
+    res.status(403).json({ error: "Only drivers can change online status" }); return;
+  }
+
+  const { isOnline } = req.body;
+  if (typeof isOnline !== "boolean") {
+    res.status(400).json({ error: "isOnline must be a boolean" }); return;
+  }
+
+  const [profile] = await db.select().from(driverProfilesTable).where(eq(driverProfilesTable.userId, currentUser.id));
+  if (!profile) { res.status(404).json({ error: "Driver profile not found" }); return; }
+  if (profile.status !== "approved") {
+    res.status(403).json({ error: "Only approved drivers can change online status" }); return;
+  }
+
+  const [updated] = await db.update(driverProfilesTable)
+    .set({ isOnline })
+    .where(eq(driverProfilesTable.userId, currentUser.id))
+    .returning();
+
+  const { passwordHash: _, ...safeUser } = currentUser;
+  res.json({ ...updated, user: { ...safeUser, driverProfile: null } });
+});
+
 driversRouter.patch("/:id/approve", requireAdmin, async (req, res) => {
   const id = parseInt(String(req.params.id));
   const parsed = ApproveDriverBody.safeParse(req.body);

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
@@ -29,6 +29,8 @@ export const driverProfilesTable = pgTable("driver_profiles", {
   cnhPhotoUrl: text("cnh_photo_url"),
   vehiclePhotoUrl: text("vehicle_photo_url"),
   criminalRecordUrl: text("criminal_record_url"),
+  // Online status
+  isOnline: boolean("is_online").notNull().default(false),
   // Admin decision
   adminNote: text("admin_note"),
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }),

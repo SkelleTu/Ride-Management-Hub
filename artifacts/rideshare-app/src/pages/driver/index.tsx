@@ -104,6 +104,7 @@ export default function DriverHome() {
   }, [user?.id]);
 
   const isApproved = profile?.status === "approved";
+  const isOnline = profile?.isOnline ?? false;
 
   if (isLoading) return (
     <div className="flex-1 flex items-center justify-center">
@@ -127,6 +128,16 @@ export default function DriverHome() {
               : profile.status === "pending"
               ? "Seu cadastro está em análise. Assim que aprovado, as corridas aparecerão aqui."
               : "Seu cadastro foi negado. Corrija os problemas indicados e reenvie sua documentação."}
+          </div>
+        </div>
+      ) : !isOnline ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-3">
+          <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center">
+            <AlertCircle className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <div className="font-semibold">Você está offline</div>
+          <div className="text-sm text-muted-foreground max-w-xs">
+            Ative o botão <span className="font-semibold text-primary">Online</span> acima para começar a receber solicitações de corrida.
           </div>
         </div>
       ) : (
