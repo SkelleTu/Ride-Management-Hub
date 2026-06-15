@@ -544,9 +544,9 @@ export default function PassengerHome() {
           shadow-2xl md:shadow-xl z-[1000] overflow-hidden
           transition-[max-height] duration-300 ease-in-out
           md:!max-h-none md:overflow-visible
-          ${sheetExpanded ? 'max-h-[72vh]' : 'max-h-[190px]'}`}
+          ${sheetExpanded ? 'max-h-[80vh]' : 'max-h-[160px]'}`}
       >
-        <div className="p-4 md:h-[calc(100dvh-80px)] md:overflow-y-auto space-y-3 pb-4 md:pb-6 overflow-y-auto" style={{ maxHeight: 'inherit' }}>
+        <div className="p-3 md:h-[calc(100dvh-80px)] md:overflow-y-auto space-y-2 pb-3 md:pb-6 overflow-y-auto" style={{ maxHeight: 'inherit' }}>
           {/* Drag handle — mobile only, click to expand/collapse */}
           <button
             onClick={() => setSheetExpanded(v => !v)}
@@ -583,12 +583,6 @@ export default function PassengerHome() {
                 Agendar
               </button>
             </div>
-          </div>
-
-          <div className="text-sm text-muted-foreground font-medium">
-            {isScheduling
-              ? "Agende sua corrida com antecedência"
-              : `Olá, ${user?.name?.split(" ")[0]}! Para onde vamos?`}
           </div>
 
           {/* Origin */}
@@ -634,16 +628,18 @@ export default function PassengerHome() {
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2 border border-border/60 focus-within:border-primary/60 transition-colors">
-              <Hash className="w-3 h-3 text-muted-foreground shrink-0" />
-              <Input
-                data-testid="input-origin-number"
-                placeholder="Número / complemento (ex: 123, Apto 4)"
-                value={originNumber}
-                onChange={(e) => setOriginNumber(e.target.value)}
-                className="border-none bg-transparent p-0 h-auto text-xs focus-visible:ring-0"
-              />
-            </div>
+            {origin && (
+              <div className="flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2 border border-border/60 focus-within:border-primary/60 transition-colors">
+                <Hash className="w-3 h-3 text-muted-foreground shrink-0" />
+                <Input
+                  data-testid="input-origin-number"
+                  placeholder="Número / complemento (ex: 123, Apto 4)"
+                  value={originNumber}
+                  onChange={(e) => setOriginNumber(e.target.value)}
+                  className="border-none bg-transparent p-0 h-auto text-xs focus-visible:ring-0"
+                />
+              </div>
+            )}
             {/* Drag-pin feedback for origin */}
             {origin && originDragState && (
               <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium animate-in fade-in duration-200 ${
@@ -656,12 +652,6 @@ export default function PassengerHome() {
                  originDragState === "ok" ? <CheckCircle className="w-3 h-3 shrink-0" /> :
                  <AlertCircle className="w-3 h-3 shrink-0" />}
                 {originDragState === "loading" ? "Verificando rua..." : originDragMsg}
-              </div>
-            )}
-            {origin && !originDragState && (
-              <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60 px-1">
-                <MoveIcon className="w-2.5 h-2.5" />
-                Arraste o pin no mapa para ajustar o ponto de origem
               </div>
             )}
           </div>
@@ -691,10 +681,6 @@ export default function PassengerHome() {
               {destination ? "Destino ✓" : "Pontuar destino"}
             </button>
           </div>
-          <p className="text-[10px] text-muted-foreground/60 text-center -mt-1">
-            Toque no mapa para posicionar o pin do {activeField === "origin" ? "embarque" : "destino"}
-          </p>
-
           {/* Destination */}
           <div className="space-y-1.5">
             <div className="relative">
@@ -732,16 +718,18 @@ export default function PassengerHome() {
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2 border border-border/60 focus-within:border-accent/60 transition-colors">
-              <Hash className="w-3 h-3 text-muted-foreground shrink-0" />
-              <Input
-                data-testid="input-dest-number"
-                placeholder="Número / complemento (ex: 456, Bloco B)"
-                value={destNumber}
-                onChange={(e) => setDestNumber(e.target.value)}
-                className="border-none bg-transparent p-0 h-auto text-xs focus-visible:ring-0"
-              />
-            </div>
+            {destination && (
+              <div className="flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2 border border-border/60 focus-within:border-accent/60 transition-colors">
+                <Hash className="w-3 h-3 text-muted-foreground shrink-0" />
+                <Input
+                  data-testid="input-dest-number"
+                  placeholder="Número / complemento (ex: 456, Bloco B)"
+                  value={destNumber}
+                  onChange={(e) => setDestNumber(e.target.value)}
+                  className="border-none bg-transparent p-0 h-auto text-xs focus-visible:ring-0"
+                />
+              </div>
+            )}
             {/* Drag-pin feedback for destination */}
             {destination && destDragState && (
               <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium animate-in fade-in duration-200 ${
@@ -754,12 +742,6 @@ export default function PassengerHome() {
                  destDragState === "ok" ? <CheckCircle className="w-3 h-3 shrink-0" /> :
                  <AlertCircle className="w-3 h-3 shrink-0" />}
                 {destDragState === "loading" ? "Verificando rua..." : destDragMsg}
-              </div>
-            )}
-            {destination && !destDragState && (
-              <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60 px-1">
-                <MoveIcon className="w-2.5 h-2.5" />
-                Arraste o pin no mapa para ajustar o ponto de destino
               </div>
             )}
           </div>
@@ -977,11 +959,6 @@ export default function PassengerHome() {
             {!createRide.isPending && <ChevronRight className="ml-1 w-4 h-4" />}
           </Button>
 
-          <div className="text-xs text-center text-muted-foreground">
-            {isScheduling
-              ? "Toque no mapa para marcar pontos · aguarde confirmação do motorista"
-              : "Toque no mapa para marcar os pontos · preço pode ser ajustado"}
-          </div>
         </div>
       </div>
     </>
