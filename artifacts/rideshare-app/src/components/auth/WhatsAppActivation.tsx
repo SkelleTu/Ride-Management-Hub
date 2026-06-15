@@ -12,7 +12,7 @@ interface Props {
   onDone: () => void;
 }
 
-type Stage = "idle" | "opening" | "waiting" | "sending" | "done" | "error";
+type Stage = "idle" | "waiting" | "sending" | "done" | "error";
 
 export function WhatsAppActivation({ name, phone, role, token, userId, onDone }: Props) {
   const [stage, setStage] = useState<Stage>("idle");
@@ -23,20 +23,23 @@ export function WhatsAppActivation({ name, phone, role, token, userId, onDone }:
   useEffect(() => {
     fetch("/api/auth/whatsapp-info")
       .then((r) => r.json())
-      .then(({ number, sandboxCode }) => {
-        const msg = sandboxCode
-          ? `join ${sandboxCode}`
-          : `Olá! Acabei de me cadastrar no UPcar como ${role === "driver" ? "motorista" : "passageiro"}.`;
+      .then(({ ownerNumber }) => {
+        const roleLabel = role === "driver" ? "motorista" : "passageiro";
+        const msg =
+          `🚗 *Novo cadastro no UPcar!*\n\n` +
+          `👤 Nome: ${name}\n` +
+          `📱 Telefone: ${phone}\n` +
+          `🏷️ Perfil: ${roleLabel === "driver" ? "Motorista" : "Passageiro"}`;
         const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         const url = isMobile
-          ? `https://wa.me/${number}?text=${encodeURIComponent(msg)}`
-          : `https://web.whatsapp.com/send/?phone=${number}&text=${encodeURIComponent(msg)}&type=phone_number&app_absent=0`;
+          ? `https://wa.me/${ownerNumber}?text=${encodeURIComponent(msg)}`
+          : `https://web.whatsapp.com/send/?phone=${ownerNumber}&text=${encodeURIComponent(msg)}&type=phone_number&app_absent=0`;
         setWhatsappUrl(url);
       })
-      .catch(() => setWhatsappUrl(`https://web.whatsapp.com/send/?phone=14155238886`));
-  }, [role]);
+      .catch(() => setWhatsappUrl("https://wa.me/5519997238298"));
+  }, [name, phone, role]);
 
-  const sendWelcome = async () => {
+  const activate = async () => {
     if (hasReturned.current) return;
     hasReturned.current = true;
     setStage("sending");
@@ -46,39 +49,34 @@ export function WhatsAppActivation({ name, phone, role, token, userId, onDone }:
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ name, phone, role, userId }),
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? "Erro ao enviar mensagem");
-      }
+      if (!res.ok) throw new Error("Erro ao ativar");
       setStage("done");
       setTimeout(() => onDone(), 2000);
     } catch (err: any) {
       hasReturned.current = false;
-      setErrorMsg(err.message ?? "Erro ao enviar mensagem");
+      setErrorMsg(err.message ?? "Tente novamente");
       setStage("error");
     }
   };
 
   const handleOpenWhatsApp = () => {
     if (!whatsappUrl) return;
-    setStage("opening");
 
     window.open(whatsappUrl, "_blank");
-
-    setTimeout(() => setStage("waiting"), 800);
+    setStage("waiting");
 
     const onReturn = () => {
       if (document.visibilityState === "visible") {
         document.removeEventListener("visibilitychange", onReturn);
         window.removeEventListener("focus", onFocus);
-        setTimeout(() => sendWelcome(), 600);
+        setTimeout(() => activate(), 600);
       }
     };
 
     const onFocus = () => {
       document.removeEventListener("visibilitychange", onReturn);
       window.removeEventListener("focus", onFocus);
-      setTimeout(() => sendWelcome(), 600);
+      setTimeout(() => activate(), 600);
     };
 
     document.addEventListener("visibilitychange", onReturn);
@@ -95,17 +93,17 @@ export function WhatsAppActivation({ name, phone, role, token, userId, onDone }:
         {stage === "done" ? (
           <div className="flex flex-col items-center gap-3 animate-in zoom-in duration-300">
             <CheckCircle2 className="w-16 h-16 text-green-500" />
-            <h2 className="text-2xl font-bold">Tudo pronto!</h2>
-            <p className="text-muted-foreground">
-              Sua boas-vindas chegará agora no WhatsApp. 🎉
+            <h2 className="text-2xl font-bold">Conta ativada!</h2>
+            <p className="text-muted-foreground text-sm">
+              Sua mensagem foi enviada e sua conta está pronta. 🎉
             </p>
           </div>
 
         ) : stage === "sending" ? (
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="w-12 h-12 text-primary animate-spin" />
-            <h2 className="text-xl font-semibold">Ativando sua conta...</h2>
-            <p className="text-muted-foreground text-sm">Aguarde só um momento.</p>
+            <h2 className="text-xl font-semibold">Ativando conta...</h2>
+            <p className="text-muted-foreground text-sm">Só um segundo.</p>
           </div>
 
         ) : stage === "waiting" ? (
@@ -113,13 +111,10 @@ export function WhatsAppActivation({ name, phone, role, token, userId, onDone }:
             <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center animate-pulse">
               <MessageCircle className="w-8 h-8 text-green-500" />
             </div>
-            <h2 className="text-xl font-bold">Enviou a mensagem?</h2>
+            <h2 className="text-xl font-bold">Quase lá!</h2>
             <p className="text-muted-foreground text-sm leading-relaxed">
-              Toque em <strong>Enviar</strong> no WhatsApp e volte aqui.<br />
-              O app continuará automaticamente assim que você voltar.
-            </p>
-            <p className="text-xs text-muted-foreground/60 mt-1">
-              Aguardando seu retorno...
+              Toque <strong>Enviar</strong> no WhatsApp e volte aqui.<br />
+              O app continua sozinho quando você voltar.
             </p>
           </div>
 
@@ -129,10 +124,19 @@ export function WhatsAppActivation({ name, phone, role, token, userId, onDone }:
               <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center">
                 <MessageCircle className="w-8 h-8 text-green-500" />
               </div>
-              <h2 className="text-2xl font-bold">Um último passo</h2>
+              <h2 className="text-2xl font-bold">Último passo</h2>
               <p className="text-muted-foreground text-sm leading-relaxed">
-                Para ativar sua conta como <strong>{roleLabel}</strong>, confirme pelo WhatsApp. É só tocar no botão abaixo!
+                Para ativar seu cadastro como <strong>{roleLabel}</strong>, nos envie uma mensagem pelo WhatsApp. É só tocar no botão!
               </p>
+            </div>
+
+            {/* Preview of the message that will be sent */}
+            <div className="w-full bg-green-500/5 border border-green-500/20 rounded-2xl p-4 text-left space-y-1">
+              <p className="text-xs text-muted-foreground font-medium mb-2">Mensagem que será enviada:</p>
+              <p className="text-sm font-semibold">🚗 Novo cadastro no UPcar!</p>
+              <p className="text-sm text-muted-foreground">👤 Nome: {name}</p>
+              <p className="text-sm text-muted-foreground">📱 Telefone: {phone}</p>
+              <p className="text-sm text-muted-foreground">🏷️ Perfil: {role === "driver" ? "Motorista" : "Passageiro"}</p>
             </div>
 
             <Button
@@ -146,14 +150,14 @@ export function WhatsAppActivation({ name, phone, role, token, userId, onDone }:
               ) : (
                 <>
                   <MessageCircle className="w-5 h-5" />
-                  Confirmar pelo WhatsApp
+                  Enviar pelo WhatsApp
                 </>
               )}
             </Button>
 
             {stage === "error" && (
               <div className="w-full bg-destructive/10 border border-destructive/20 rounded-xl p-3 text-sm text-destructive text-left">
-                {errorMsg} — tente novamente.
+                {errorMsg}
                 <button
                   className="block mt-1 underline text-xs"
                   onClick={() => { hasReturned.current = false; setStage("idle"); }}
@@ -163,11 +167,9 @@ export function WhatsAppActivation({ name, phone, role, token, userId, onDone }:
               </div>
             )}
 
-            <div className="bg-secondary/50 rounded-xl p-4 text-left w-full">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                📱 O WhatsApp abrirá com a mensagem pronta. Toque <strong>Enviar</strong> e volte — o restante é automático.
-              </p>
-            </div>
+            <p className="text-xs text-muted-foreground">
+              O WhatsApp abrirá com a mensagem pronta — só toque <strong>Enviar</strong> e volte aqui.
+            </p>
           </>
         )}
       </div>

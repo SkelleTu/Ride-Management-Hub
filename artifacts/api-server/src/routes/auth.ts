@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { RegisterBody, LoginBody } from "@workspace/api-zod";
 import { hashPassword, generateToken, storeToken, removeToken, requireAuth } from "../lib/auth";
 import { activityLogTable } from "@workspace/db";
-import { notifyOwner, sendWelcome } from "../lib/whatsapp";
+import { sendWelcome, OWNER_WHATSAPP_NUMBER } from "../lib/whatsapp";
 
 export const authRouter = Router();
 
@@ -50,13 +50,6 @@ authRouter.post("/register", async (req, res) => {
     userName: user.name,
   });
 
-  notifyOwner({
-    name: user.name,
-    email: user.email,
-    phone: user.phone ?? "",
-    role: user.role as "passenger" | "driver",
-  }).catch(() => {});
-
   const token = generateToken(user.id);
   storeToken(token, user.id);
   const { passwordHash: _, ...safeUser } = user;
@@ -91,31 +84,27 @@ authRouter.post("/login", async (req, res) => {
   res.json({ user: { ...safeUser, driverProfile }, token });
 });
 
+// Returns info needed for WhatsApp activation screen
 authRouter.get("/whatsapp-info", (_req, res) => {
-  const from = process.env.TWILIO_WHATSAPP_FROM ?? "whatsapp:+14155238886";
-  const sandboxCode = process.env.TWILIO_SANDBOX_CODE ?? "";
-  const number = from.replace("whatsapp:+", "").replace("whatsapp:", "").trim();
-  res.json({ number, sandboxCode });
+  res.json({ ownerNumber: OWNER_WHATSAPP_NUMBER });
 });
 
+// Marks WhatsApp as activated and optionally sends a welcome message to the user
 authRouter.post("/send-welcome", async (req, res) => {
   const { name, phone, role, userId } = req.body;
-  if (!name || !phone || !role) {
-    res.status(400).json({ error: "name, phone e role são obrigatórios" });
+  if (!name || !phone || !role || !userId) {
+    res.status(400).json({ error: "name, phone, role e userId são obrigatórios" });
     return;
   }
-  try {
-    await sendWelcome({ name, phone, role });
-    // Mark whatsapp as activated if userId provided
-    if (userId) {
-      await db.update(usersTable)
-        .set({ whatsappActivated: true })
-        .where(eq(usersTable.id, userId));
-    }
-    res.json({ ok: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message ?? "Falha ao enviar mensagem" });
-  }
+  // Mark whatsapp as activated immediately
+  await db.update(usersTable)
+    .set({ whatsappActivated: true })
+    .where(eq(usersTable.id, userId));
+
+  // Best-effort: send a welcome message via Twilio (non-blocking, does not affect activation)
+  sendWelcome({ name, phone, role }).catch(() => {});
+
+  res.json({ ok: true });
 });
 
 authRouter.post("/logout", requireAuth, (req, res) => {

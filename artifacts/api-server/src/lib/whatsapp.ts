@@ -1,7 +1,8 @@
 import twilio from "twilio";
 import { logger } from "./logger";
 
-const OWNER_PHONE = "whatsapp:+5519997238298";
+// Owner number for direct wa.me notification (sent by the new user directly)
+export const OWNER_WHATSAPP_NUMBER = "5519997238298";
 
 function getClient() {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -29,35 +30,7 @@ function normalizePhone(phone: string): string {
   return `whatsapp:+55${digits}`;
 }
 
-export async function notifyOwner(params: {
-  name: string;
-  email: string;
-  phone: string;
-  role: "passenger" | "driver";
-}): Promise<void> {
-  const { name, email, phone, role } = params;
-  const roleLabel = role === "driver" ? "Motorista" : "Passageiro";
-
-  try {
-    const client = getClient();
-    const from = getFromNumber();
-    await client.messages.create({
-      from,
-      to: OWNER_PHONE,
-      body:
-        `🔔 *Novo cadastro no UPcar!*\n\n` +
-        `👤 Nome: ${name}\n` +
-        `📧 Email: ${email}\n` +
-        `📱 Telefone: ${phone}\n` +
-        `🏷️ Perfil: ${roleLabel}\n\n` +
-        `Acesse o painel para ativar ou revisar o cadastro.`,
-    });
-    logger.info({ name, role }, "Notificação WhatsApp enviada ao proprietário");
-  } catch (err) {
-    logger.warn({ err }, "Falha ao notificar proprietário via WhatsApp");
-  }
-}
-
+// Sends a welcome message to the new user via Twilio (best-effort, non-blocking)
 export async function sendWelcome(params: {
   name: string;
   phone: string;
