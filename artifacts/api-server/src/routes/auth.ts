@@ -15,11 +15,23 @@ authRouter.post("/register", async (req, res) => {
     return;
   }
   const { name, email, password, phone, role, cpf, address } = parsed.data;
+
   const existing = await db.select().from(usersTable).where(eq(usersTable.email, email));
+
+  // If account exists but WhatsApp wasn't activated yet, resume the flow
   if (existing.length > 0) {
+    const user = existing[0];
+    if (!user.whatsappActivated) {
+      const token = generateToken(user.id);
+      storeToken(token, user.id);
+      const { passwordHash: _, ...safeUser } = user;
+      res.status(200).json({ user: { ...safeUser, driverProfile: null }, token, resuming: true });
+      return;
+    }
     res.status(409).json({ error: "Email already registered" });
     return;
   }
+
   const [user] = await db.insert(usersTable).values({
     name,
     email,
@@ -29,6 +41,7 @@ authRouter.post("/register", async (req, res) => {
     ...(cpf ? { cpf } : {}),
     ...(address ? { address } : {}),
   }).returning();
+
   // Log activity
   await db.insert(activityLogTable).values({
     type: role === "driver" ? "driver_registered" : "new_passenger",
@@ -36,6 +49,7 @@ authRouter.post("/register", async (req, res) => {
     userId: user.id,
     userName: user.name,
   });
+
   notifyOwner({
     name: user.name,
     email: user.email,
@@ -80,18 +94,24 @@ authRouter.post("/login", async (req, res) => {
 authRouter.get("/whatsapp-info", (_req, res) => {
   const from = process.env.TWILIO_WHATSAPP_FROM ?? "whatsapp:+14155238886";
   const sandboxCode = process.env.TWILIO_SANDBOX_CODE ?? "";
-  const number = from.replace("whatsapp:+", "");
+  const number = from.replace("whatsapp:+", "").replace("whatsapp:", "").trim();
   res.json({ number, sandboxCode });
 });
 
 authRouter.post("/send-welcome", async (req, res) => {
-  const { name, phone, role } = req.body;
+  const { name, phone, role, userId } = req.body;
   if (!name || !phone || !role) {
     res.status(400).json({ error: "name, phone e role são obrigatórios" });
     return;
   }
   try {
     await sendWelcome({ name, phone, role });
+    // Mark whatsapp as activated if userId provided
+    if (userId) {
+      await db.update(usersTable)
+        .set({ whatsappActivated: true })
+        .where(eq(usersTable.id, userId));
+    }
     res.json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message ?? "Falha ao enviar mensagem" });

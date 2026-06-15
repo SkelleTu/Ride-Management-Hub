@@ -17,6 +17,7 @@ export const usersTable = pgTable("users", {
   address: text("address"),
   isSuspended: boolean("is_suspended").notNull().default(false),
   suspendedReason: text("suspended_reason"),
+  whatsappActivated: boolean("whatsapp_activated").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

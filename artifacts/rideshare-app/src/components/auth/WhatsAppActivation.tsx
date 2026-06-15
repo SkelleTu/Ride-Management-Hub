@@ -8,12 +8,13 @@ interface Props {
   phone: string;
   role: "passenger" | "driver";
   token: string;
+  userId: number;
   onDone: () => void;
 }
 
 type Stage = "idle" | "opening" | "waiting" | "sending" | "done" | "error";
 
-export function WhatsAppActivation({ name, phone, role, token, onDone }: Props) {
+export function WhatsAppActivation({ name, phone, role, token, userId, onDone }: Props) {
   const [stage, setStage] = useState<Stage>("idle");
   const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -43,7 +44,7 @@ export function WhatsAppActivation({ name, phone, role, token, onDone }: Props) 
       const res = await fetch("/api/auth/send-welcome", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name, phone, role }),
+        body: JSON.stringify({ name, phone, role, userId }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -67,7 +68,7 @@ export function WhatsAppActivation({ name, phone, role, token, onDone }: Props) 
     setTimeout(() => setStage("waiting"), 800);
 
     const onReturn = () => {
-      if (document.visibilityState === "visible" && stage !== "done" && stage !== "sending") {
+      if (document.visibilityState === "visible") {
         document.removeEventListener("visibilitychange", onReturn);
         window.removeEventListener("focus", onFocus);
         setTimeout(() => sendWelcome(), 600);

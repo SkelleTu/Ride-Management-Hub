@@ -105,7 +105,7 @@ export default function Register() {
 
   const [biometricData, setBiometricData] = useState<{ token: string; email: string } | null>(null);
   const [pendingRoute, setPendingRoute] = useState<string | null>(null);
-  const [whatsappData, setWhatsappData] = useState<{ name: string; phone: string; role: "passenger" | "driver"; token: string } | null>(null);
+  const [whatsappData, setWhatsappData] = useState<{ name: string; phone: string; role: "passenger" | "driver"; token: string; userId: number } | null>(null);
 
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
@@ -229,12 +229,12 @@ export default function Register() {
             login(token, { ...data.user, avatarUrl: photoPreview });
             const route = role === "driver" ? "/driver/profile" : "/passenger";
             setPendingRoute(route);
-            setWhatsappData({ name, phone, role, token });
+            setWhatsappData({ name, phone, role, token, userId: data.user.id });
           } catch {
             login(data.token, data.user);
             const route = role === "driver" ? "/driver/profile" : "/passenger";
             setPendingRoute(route);
-            setWhatsappData({ name, phone, role, token: data.token });
+            setWhatsappData({ name, phone, role, token: data.token, userId: data.user.id });
           }
         },
         onError: (error) => {
@@ -466,6 +466,7 @@ export default function Register() {
           phone={whatsappData.phone}
           role={whatsappData.role}
           token={whatsappData.token}
+          userId={whatsappData.userId}
           onDone={handleWhatsAppDone}
         />
       )}
