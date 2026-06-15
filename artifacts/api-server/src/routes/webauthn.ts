@@ -115,6 +115,7 @@ webauthnRouter.post("/authenticate-options", async (req, res) => {
   const options = await generateAuthenticationOptions({
     rpID,
     userVerification: "preferred",
+    timeout: 60000,
     allowCredentials: creds.map((c) => ({
       id: c.credentialId,
     })),
