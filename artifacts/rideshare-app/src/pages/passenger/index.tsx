@@ -7,7 +7,7 @@ import { getListRidesQueryKey } from "@workspace/api-client-react";
 import MapView from "@/components/map/MapView";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronRight, ChevronUp, Navigation, Loader2, Route, Hash, LocateFixed, Calendar, Clock, Radio, User2, FileText, Globe, AlertCircle, CheckCircle, MoveIcon } from "lucide-react";
+import { ChevronRight, Navigation, Loader2, Route, Hash, LocateFixed, Calendar, Clock, Radio, User2, FileText, Globe, AlertCircle, CheckCircle, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const PRICE_PER_KM = 2;
@@ -148,8 +148,9 @@ export default function PassengerHome() {
   // ── Active map field (which pin map clicks go to) ──────────────────────
   const [activeField, setActiveField] = useState<"origin" | "destination">("origin");
 
-  // ── Mobile bottom sheet ────────────────────────────────────────────────
-  const [sheetExpanded, setSheetExpanded] = useState(false);
+  // ── Page step: "form" shows only the form; "waiting" shows map + radar ─
+  const [step, setStep] = useState<"form" | "waiting">("form");
+  const [pendingRideId, setPendingRideId] = useState<number | null>(null);
 
   // ── Drag-pin state ─────────────────────────────────────────────────────
   const [originDragState, setOriginDragState] = useState<DragState>(null);
@@ -240,6 +241,26 @@ export default function PassengerHome() {
       } catch {} finally { setAvailabilityLoading(false); }
     }, 600);
   }, [scheduledFor, durationSeconds, isScheduling]);
+
+  // ── Poll for driver acceptance when waiting ────────────────────────────
+  useEffect(() => {
+    if (step !== "waiting" || !pendingRideId) return;
+    const token = localStorage.getItem("token");
+    const interval = setInterval(async () => {
+      try {
+        const r = await fetch(`/api/rides/${pendingRideId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!r.ok) return;
+        const ride = await r.json();
+        if (["accepted", "in_progress"].includes(ride.status)) {
+          clearInterval(interval);
+          setLocation(`/passenger/ride/${pendingRideId}`);
+        }
+      } catch {}
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [step, pendingRideId, setLocation]);
 
   const createRide = useCreateRide();
 
@@ -510,7 +531,8 @@ export default function PassengerHome() {
           });
           setLocation(`/passenger/scheduled`);
         } else {
-          setLocation(`/passenger/ride/${ride.id}`);
+          setPendingRideId(ride.id);
+          setStep("waiting");
         }
       },
       onError: (err: any) => {
@@ -522,8 +544,20 @@ export default function PassengerHome() {
 
   return (
     <>
-      {/* Map — sits between navbar and the collapsed bottom sheet on mobile */}
-      <div className="fixed top-20 bottom-[224px] md:bottom-0 left-0 right-0 md:left-96 z-0">
+      {/* ── Keyframes for radar animation ── */}
+      <style>{`
+        @keyframes radarRing {
+          0%   { transform: scale(0.2); opacity: 0.9; }
+          100% { transform: scale(2.8); opacity: 0; }
+        }
+      `}</style>
+
+      {/* Map — hidden on mobile while filling form; full-screen on mobile when waiting */}
+      <div className={`fixed z-0 md:top-20 md:bottom-0 md:left-96 md:right-0
+        ${step === "waiting"
+          ? "top-20 bottom-16 left-0 right-0"
+          : "hidden md:block"
+        }`}>
         <MapView
           origin={origin}
           destination={destination}
@@ -535,30 +569,76 @@ export default function PassengerHome() {
           passengerLabel={user?.name ? user.name.split(" ").slice(0, 2).join(" ") : "Você"}
           className="h-full w-full"
         />
+
+        {/* Radar overlay — shown on both mobile and desktop when waiting */}
+        {step === "waiting" && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center pointer-events-none">
+            {/* Radar rings */}
+            <div className="relative flex items-center justify-center mb-8">
+              {[0, 1, 2, 3].map(i => (
+                <span
+                  key={i}
+                  className="absolute rounded-full border-2 border-primary"
+                  style={{
+                    width: 96,
+                    height: 96,
+                    opacity: 0,
+                    animation: `radarRing 2.4s ease-out ${i * 0.6}s infinite`,
+                  }}
+                />
+              ))}
+              {/* Centre dot */}
+              <span className="relative z-10 flex items-center justify-center w-12 h-12 rounded-full bg-primary/20 border-2 border-primary shadow-lg shadow-primary/30">
+                <MapPin className="w-6 h-6 text-primary fill-primary/30" />
+              </span>
+            </div>
+            {/* Text card */}
+            <div className="bg-background/80 backdrop-blur-md rounded-2xl px-6 py-4 mx-6 text-center shadow-xl border border-border/50">
+              <p className="text-foreground font-semibold text-base leading-snug">Solicitando viagem…</p>
+              <p className="text-muted-foreground text-sm mt-1 leading-snug">Aguarde um motorista confirmar<br/>sua solicitação</p>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Form — sidebar on desktop, collapsible bottom sheet on mobile */}
+      {/* Form — full-screen panel on mobile (form step); sidebar on desktop always */}
       <div
-        className={`fixed bottom-16 left-0 right-0 md:bottom-0 md:top-20 md:right-auto md:w-96
-          bg-card border-t md:border-t-0 md:border-r border-border rounded-t-2xl md:rounded-none
-          shadow-2xl md:shadow-xl z-[1000] overflow-hidden
-          flex flex-col
-          transition-[max-height] duration-300 ease-in-out
-          md:!max-h-none
-          ${sheetExpanded ? 'max-h-[80vh]' : 'max-h-[160px]'}`}
+        className={`fixed z-[1000] bg-card border-border shadow-2xl overflow-hidden flex flex-col
+          md:top-20 md:bottom-0 md:left-0 md:right-auto md:w-96 md:border-r md:shadow-xl md:!flex
+          ${step === "form"
+            ? "top-20 bottom-16 left-0 right-0 border-b"
+            : "hidden"
+          }`}
       >
-        {/* Drag handle — mobile only, OUTSIDE the scroll area so it stays visible */}
-        <button
-          onClick={() => setSheetExpanded(v => !v)}
-          className="w-full flex flex-col items-center gap-1 md:hidden pt-2 pb-1 shrink-0 focus:outline-none"
-          aria-label={sheetExpanded ? "Recolher painel" : "Expandir painel"}
-        >
-          <div className="w-10 h-1 bg-muted rounded-full" />
-          <ChevronUp className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-300 ${sheetExpanded ? 'rotate-180' : ''}`} />
-        </button>
+        {/* Scrollable content */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 pt-3 space-y-2 pb-3 md:pb-6 md:h-[calc(100dvh-80px)]">
 
-        {/* Scrollable content — flex-1 + min-h-0 lets it fill remaining space and scroll */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-3 pt-1 md:pt-3 space-y-2 pb-3 md:pb-6 md:h-[calc(100dvh-80px)]">
+          {/* Desktop waiting state — shown in sidebar when waiting on large screens */}
+          {step === "waiting" && (
+            <div className="flex flex-col items-center justify-center h-full gap-6 py-12">
+              <div className="relative flex items-center justify-center">
+                {[0, 1, 2, 3].map(i => (
+                  <span
+                    key={i}
+                    className="absolute rounded-full border-2 border-primary"
+                    style={{
+                      width: 80,
+                      height: 80,
+                      opacity: 0,
+                      animation: `radarRing 2.4s ease-out ${i * 0.6}s infinite`,
+                    }}
+                  />
+                ))}
+                <span className="relative z-10 flex items-center justify-center w-10 h-10 rounded-full bg-primary/20 border-2 border-primary">
+                  <MapPin className="w-5 h-5 text-primary fill-primary/30" />
+                </span>
+              </div>
+              <div className="text-center px-4">
+                <p className="font-semibold text-base">Solicitando viagem…</p>
+                <p className="text-muted-foreground text-sm mt-2 leading-relaxed">Aguarde um motorista confirmar sua solicitação</p>
+              </div>
+            </div>
+          )}
 
           {/* Mode toggle: Agora / Agendar */}
           <div className="flex items-center gap-2">
@@ -606,7 +686,7 @@ export default function PassengerHome() {
                   autoCorrect="off"
                   autoCapitalize="off"
                   spellCheck={false}
-                  onFocus={() => { setActiveField("origin"); setSheetExpanded(true); }}
+                  onFocus={() => setActiveField("origin")}
                   onChange={(e) => {
                     setOriginQuery(e.target.value);
                     setOrigin(null);
@@ -679,7 +759,7 @@ export default function PassengerHome() {
                   autoCorrect="off"
                   autoCapitalize="off"
                   spellCheck={false}
-                  onFocus={() => { setActiveField("destination"); setSheetExpanded(true); }}
+                  onFocus={() => setActiveField("destination")}
                   onChange={(e) => {
                     setDestQuery(e.target.value);
                     setDestination(null);
