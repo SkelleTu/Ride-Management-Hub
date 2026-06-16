@@ -33,9 +33,12 @@ export async function seedDefaultAccounts() {
     });
   } else {
     const owner = existing[0];
-    // Garantir que a foto esteja sempre atualizada
-    if (!owner.avatarUrl) {
-      await db.update(usersTable).set({ avatarUrl: "/avatars/victor.jpg" }).where(eq(usersTable.email, ownerEmail));
+    // Garantir que a foto esteja sempre atualizada e que whatsappActivated seja true para conta semeada
+    const updates: Record<string, any> = {};
+    if (!owner.avatarUrl) updates.avatarUrl = "/avatars/victor.jpg";
+    if (!owner.whatsappActivated) updates.whatsappActivated = true;
+    if (Object.keys(updates).length > 0) {
+      await db.update(usersTable).set(updates).where(eq(usersTable.email, ownerEmail));
     }
     const profiles = await db.select().from(driverProfilesTable).where(eq(driverProfilesTable.userId, owner.id));
     if (profiles.length === 0) {
@@ -70,8 +73,12 @@ export async function seedDefaultAccounts() {
       totalRides: 0,
     });
   } else {
-    if (!existingJoao[0].avatarUrl) {
-      await db.update(usersTable).set({ avatarUrl: "/avatars/joao.jpg" }).where(eq(usersTable.email, joaoEmail));
+    const joao = existingJoao[0];
+    const joaoUpdates: Record<string, any> = {};
+    if (!joao.avatarUrl) joaoUpdates.avatarUrl = "/avatars/joao.jpg";
+    if (!joao.whatsappActivated) joaoUpdates.whatsappActivated = true;
+    if (Object.keys(joaoUpdates).length > 0) {
+      await db.update(usersTable).set(joaoUpdates).where(eq(usersTable.email, joaoEmail));
     }
   }
 

@@ -72,8 +72,8 @@ export default function Login() {
   };
 
   const redirectAfterLogin = async (token: string, user: any) => {
-    // WhatsApp not activated yet → show activation first
-    if (user.whatsappActivated === false) {
+    // WhatsApp not activated yet → show activation first (skip for admin)
+    if (user.whatsappActivated === false && user.role !== "admin") {
       login(token, user);
       setWhatsappData({ name: user.name, phone: user.phone, role: user.role, token, userId: user.id });
       return;
