@@ -711,18 +711,16 @@ export default function PassengerHome() {
                 </div>
               )}
             </div>
-            {origin && (
-              <div className="flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2 border border-border/60 focus-within:border-primary/60 transition-colors">
-                <Hash className="w-3 h-3 text-muted-foreground shrink-0" />
-                <Input
-                  data-testid="input-origin-number"
-                  placeholder="Número / complemento (ex: 123, Apto 4)"
-                  value={originNumber}
-                  onChange={(e) => setOriginNumber(e.target.value)}
-                  className="border-none bg-transparent p-0 h-auto text-xs focus-visible:ring-0"
-                />
-              </div>
-            )}
+            <div className="flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2 border border-border/60 focus-within:border-primary/60 transition-colors">
+              <Hash className="w-3 h-3 text-muted-foreground shrink-0" />
+              <Input
+                data-testid="input-origin-number"
+                placeholder={origin ? "Número / complemento (ex: 123, Apto 4)" : "Nº / complemento da origem"}
+                value={originNumber}
+                onChange={(e) => setOriginNumber(e.target.value)}
+                className="border-none bg-transparent p-0 h-auto text-xs focus-visible:ring-0"
+              />
+            </div>
             {/* Drag-pin feedback for origin */}
             {origin && originDragState && (
               <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium animate-in fade-in duration-200 ${
@@ -783,23 +781,16 @@ export default function PassengerHome() {
                 </div>
               )}
             </div>
-            {destination && (
-              <div className="space-y-0.5">
-                <label className="text-[10px] font-medium text-muted-foreground flex items-center gap-1 px-1">
-                  <Hash className="w-2.5 h-2.5" /> Número / Complemento — Destino
-                </label>
-                <div className="flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2 border border-border/60 focus-within:border-accent/60 transition-colors">
-                  <Hash className="w-3 h-3 text-muted-foreground shrink-0" />
-                  <Input
-                    data-testid="input-dest-number"
-                    placeholder="ex: 456, Apto 2, Bloco B"
-                    value={destNumber}
-                    onChange={(e) => setDestNumber(e.target.value)}
-                    className="border-none bg-transparent p-0 h-auto text-xs focus-visible:ring-0"
-                  />
-                </div>
-              </div>
-            )}
+            <div className="flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2 border border-border/60 focus-within:border-accent/60 transition-colors">
+              <Hash className="w-3 h-3 text-muted-foreground shrink-0" />
+              <Input
+                data-testid="input-dest-number"
+                placeholder={destination ? "Número / complemento (ex: 456, Apto 2)" : "Nº / complemento do destino"}
+                value={destNumber}
+                onChange={(e) => setDestNumber(e.target.value)}
+                className="border-none bg-transparent p-0 h-auto text-xs focus-visible:ring-0"
+              />
+            </div>
             {/* Drag-pin feedback for destination */}
             {destination && destDragState && (
               <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium animate-in fade-in duration-200 ${
@@ -818,7 +809,7 @@ export default function PassengerHome() {
 
           {/* ── Scheduling Panel ──────────────────────────────────────────── */}
           {isScheduling && (
-            <div className="space-y-3 border border-primary/20 bg-primary/5 rounded-xl p-3">
+            <div className="space-y-3 border border-border bg-secondary/40 rounded-xl p-3">
               {/* Date/time */}
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
