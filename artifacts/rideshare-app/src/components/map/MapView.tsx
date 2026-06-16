@@ -331,7 +331,14 @@ function MapView({
     mapInstance.current = map;
     setTimeout(() => map.invalidateSize(), 100);
 
+    // Recalculate map size whenever the container resizes (e.g. bottom sheet expand/collapse)
+    const ro = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    ro.observe(mapRef.current);
+
     return () => {
+      ro.disconnect();
       try { Object.values(markersRef.current).forEach(m => m?.remove()); } catch {}
       markersRef.current = {};
       try { polylineRef.current?.remove(); } catch {}

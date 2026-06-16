@@ -522,8 +522,8 @@ export default function PassengerHome() {
 
   return (
     <>
-      {/* Map — full screen on desktop, above BottomNav on mobile */}
-      <div className="fixed top-20 bottom-16 md:bottom-0 left-0 right-0 md:left-96 z-0">
+      {/* Map — sits between navbar and the collapsed bottom sheet on mobile */}
+      <div className="fixed top-20 bottom-[224px] md:bottom-0 left-0 right-0 md:left-96 z-0">
         <MapView
           origin={origin}
           destination={destination}
@@ -542,20 +542,23 @@ export default function PassengerHome() {
         className={`fixed bottom-16 left-0 right-0 md:bottom-0 md:top-20 md:right-auto md:w-96
           bg-card border-t md:border-t-0 md:border-r border-border rounded-t-2xl md:rounded-none
           shadow-2xl md:shadow-xl z-[1000] overflow-hidden
+          flex flex-col
           transition-[max-height] duration-300 ease-in-out
-          md:!max-h-none md:overflow-visible
+          md:!max-h-none
           ${sheetExpanded ? 'max-h-[80vh]' : 'max-h-[160px]'}`}
       >
-        <div className="p-3 md:h-[calc(100dvh-80px)] md:overflow-y-auto space-y-2 pb-3 md:pb-6 overflow-y-auto" style={{ maxHeight: 'inherit' }}>
-          {/* Drag handle — mobile only, click to expand/collapse */}
-          <button
-            onClick={() => setSheetExpanded(v => !v)}
-            className="w-full flex flex-col items-center gap-1 md:hidden pb-1 focus:outline-none"
-            aria-label={sheetExpanded ? "Recolher painel" : "Expandir painel"}
-          >
-            <div className="w-10 h-1 bg-muted rounded-full" />
-            <ChevronUp className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-300 ${sheetExpanded ? 'rotate-180' : ''}`} />
-          </button>
+        {/* Drag handle — mobile only, OUTSIDE the scroll area so it stays visible */}
+        <button
+          onClick={() => setSheetExpanded(v => !v)}
+          className="w-full flex flex-col items-center gap-1 md:hidden pt-2 pb-1 shrink-0 focus:outline-none"
+          aria-label={sheetExpanded ? "Recolher painel" : "Expandir painel"}
+        >
+          <div className="w-10 h-1 bg-muted rounded-full" />
+          <ChevronUp className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-300 ${sheetExpanded ? 'rotate-180' : ''}`} />
+        </button>
+
+        {/* Scrollable content — flex-1 + min-h-0 lets it fill remaining space and scroll */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 pt-1 md:pt-3 space-y-2 pb-3 md:pb-6 md:h-[calc(100dvh-80px)]">
 
           {/* Mode toggle: Agora / Agendar */}
           <div className="flex items-center gap-2">
@@ -701,15 +704,20 @@ export default function PassengerHome() {
               )}
             </div>
             {destination && (
-              <div className="flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2 border border-border/60 focus-within:border-accent/60 transition-colors">
-                <Hash className="w-3 h-3 text-muted-foreground shrink-0" />
-                <Input
-                  data-testid="input-dest-number"
-                  placeholder="Número / complemento (ex: 456, Bloco B)"
-                  value={destNumber}
-                  onChange={(e) => setDestNumber(e.target.value)}
-                  className="border-none bg-transparent p-0 h-auto text-xs focus-visible:ring-0"
-                />
+              <div className="space-y-0.5">
+                <label className="text-[10px] font-medium text-muted-foreground flex items-center gap-1 px-1">
+                  <Hash className="w-2.5 h-2.5" /> Número / Complemento — Destino
+                </label>
+                <div className="flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2 border border-border/60 focus-within:border-accent/60 transition-colors">
+                  <Hash className="w-3 h-3 text-muted-foreground shrink-0" />
+                  <Input
+                    data-testid="input-dest-number"
+                    placeholder="ex: 456, Apto 2, Bloco B"
+                    value={destNumber}
+                    onChange={(e) => setDestNumber(e.target.value)}
+                    className="border-none bg-transparent p-0 h-auto text-xs focus-visible:ring-0"
+                  />
+                </div>
               </div>
             )}
             {/* Drag-pin feedback for destination */}
