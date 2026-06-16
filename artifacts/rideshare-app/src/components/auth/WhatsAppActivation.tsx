@@ -61,26 +61,8 @@ export function WhatsAppActivation({ name, phone, role, token, userId, onDone }:
 
   const handleOpenWhatsApp = () => {
     if (!whatsappUrl) return;
-
     window.open(whatsappUrl, "_blank");
     setStage("waiting");
-
-    const onReturn = () => {
-      if (document.visibilityState === "visible") {
-        document.removeEventListener("visibilitychange", onReturn);
-        window.removeEventListener("focus", onFocus);
-        setTimeout(() => activate(), 600);
-      }
-    };
-
-    const onFocus = () => {
-      document.removeEventListener("visibilitychange", onReturn);
-      window.removeEventListener("focus", onFocus);
-      setTimeout(() => activate(), 600);
-    };
-
-    document.addEventListener("visibilitychange", onReturn);
-    window.addEventListener("focus", onFocus);
   };
 
   const roleLabel = role === "driver" ? "motorista" : "passageiro";
@@ -107,15 +89,30 @@ export function WhatsAppActivation({ name, phone, role, token, userId, onDone }:
           </div>
 
         ) : stage === "waiting" ? (
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-5 w-full">
             <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center animate-pulse">
               <MessageCircle className="w-8 h-8 text-green-500" />
             </div>
-            <h2 className="text-xl font-bold">Quase lá!</h2>
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              Toque <strong>Enviar</strong> no WhatsApp e volte aqui.<br />
-              O app continua sozinho quando você voltar.
-            </p>
+            <div className="space-y-1 text-center">
+              <h2 className="text-xl font-bold">Quase lá!</h2>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                Toque <strong>Enviar</strong> no WhatsApp e depois clique no botão abaixo para confirmar.
+              </p>
+            </div>
+            <Button
+              size="lg"
+              className="w-full h-14 text-base font-semibold gap-2"
+              onClick={activate}
+            >
+              <CheckCircle2 className="w-5 h-5" />
+              Já enviei a mensagem ✓
+            </Button>
+            <button
+              className="text-xs text-muted-foreground underline underline-offset-2"
+              onClick={handleOpenWhatsApp}
+            >
+              Reabrir WhatsApp
+            </button>
           </div>
 
         ) : (
