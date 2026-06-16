@@ -15,6 +15,7 @@ export const usersTable = pgTable("users", {
   totalRatings: integer("total_ratings").notNull().default(0),
   cpf: text("cpf"),
   address: text("address"),
+  accountStatus: text("account_status").notNull().default("approved"), // pending | approved | denied
   isSuspended: boolean("is_suspended").notNull().default(false),
   suspendedReason: text("suspended_reason"),
   whatsappActivated: boolean("whatsapp_activated").notNull().default(false),

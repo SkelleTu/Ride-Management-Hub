@@ -62,6 +62,21 @@ export default function AdminHome() {
         </div>
       )}
 
+      {/* Pending Accounts Alert */}
+      {stats && (stats as any).pendingAccounts > 0 && (
+        <button onClick={() => setLocation("/admin/passengers")}
+          className="w-full flex items-center justify-between bg-orange-500/10 border border-orange-500/30 rounded-xl p-4 text-left hover:bg-orange-500/20 transition-colors">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-orange-400" />
+            <div>
+              <div className="font-semibold text-orange-400">{(stats as any).pendingAccounts} conta{(stats as any).pendingAccounts > 1 ? "s" : ""} aguardando confirmação</div>
+              <div className="text-xs text-muted-foreground">Clique para aprovar ou negar</div>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-orange-400" />
+        </button>
+      )}
+
       {/* Pending Drivers Alert */}
       {stats && stats.pendingDrivers > 0 && (
         <button onClick={() => setLocation("/admin/drivers")}

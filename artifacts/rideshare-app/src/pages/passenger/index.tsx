@@ -928,14 +928,23 @@ export default function PassengerHome() {
                 />
               </div>
 
+              {user?.accountStatus === "pending" && (
+                <div className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3">
+                  <AlertCircle className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
+                  <div className="text-xs text-yellow-300 leading-relaxed">
+                    <span className="font-semibold">Conta aguardando aprovação.</span> Você receberá acesso completo assim que confirmarmos seu cadastro.
+                  </div>
+                </div>
+              )}
               <Button
                 data-testid="button-request-ride"
                 onClick={handleSubmit}
                 disabled={
+                  user?.accountStatus !== "approved" ||
                   !offeredPrice || createRide.isPending || isCalculating ||
                   (isScheduling && availability?.driverCount === 0 && !availabilityLoading)
                 }
-                className="w-full h-12 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl"
+                className="w-full h-12 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl disabled:opacity-50"
               >
                 {createRide.isPending
                   ? (isScheduling ? "Agendando..." : "Solicitando...")

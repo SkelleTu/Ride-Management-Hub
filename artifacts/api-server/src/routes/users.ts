@@ -77,6 +77,30 @@ usersRouter.patch("/me/avatar", requireAuth, async (req, res) => {
   res.json({ ...safe, driverProfile: null });
 });
 
+usersRouter.patch("/:id/approve-account", requireAdmin, async (req, res) => {
+  const id = parseInt(String(req.params.id));
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [updated] = await db.update(usersTable)
+    .set({ accountStatus: "approved" })
+    .where(eq(usersTable.id, id))
+    .returning();
+  if (!updated) { res.status(404).json({ error: "User not found" }); return; }
+  const { passwordHash: _, ...safe } = updated;
+  res.json({ ...safe, driverProfile: null });
+});
+
+usersRouter.patch("/:id/deny-account", requireAdmin, async (req, res) => {
+  const id = parseInt(String(req.params.id));
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [updated] = await db.update(usersTable)
+    .set({ accountStatus: "denied" })
+    .where(eq(usersTable.id, id))
+    .returning();
+  if (!updated) { res.status(404).json({ error: "User not found" }); return; }
+  const { passwordHash: _, ...safe } = updated;
+  res.json({ ...safe, driverProfile: null });
+});
+
 usersRouter.delete("/:id", requireAdmin, async (req, res) => {
   const id = parseInt(String(req.params.id));
   await db.delete(usersTable).where(eq(usersTable.id, id));

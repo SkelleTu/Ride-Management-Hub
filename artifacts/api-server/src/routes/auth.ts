@@ -38,6 +38,7 @@ authRouter.post("/register", async (req, res) => {
     passwordHash: hashPassword(password),
     phone,
     role,
+    accountStatus: "pending",
     ...(cpf ? { cpf } : {}),
     ...(address ? { address } : {}),
   }).returning();

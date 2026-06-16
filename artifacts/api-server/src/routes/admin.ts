@@ -13,6 +13,7 @@ adminRouter.get("/stats", requireAdmin, async (req, res) => {
   const totalPassengers = users.filter(u => u.role === "passenger").length;
   const totalDrivers = users.filter(u => u.role === "driver").length;
   const pendingDrivers = drivers.filter(d => d.status === "pending").length;
+  const pendingAccounts = users.filter(u => u.accountStatus === "pending" && u.role !== "admin").length;
   const approvedDrivers = drivers.filter(d => d.status === "approved").length;
   const deniedDrivers = drivers.filter(d => d.status === "denied").length;
   const totalRides = rides.length;
@@ -27,6 +28,7 @@ adminRouter.get("/stats", requireAdmin, async (req, res) => {
     totalPassengers,
     totalDrivers,
     pendingDrivers,
+    pendingAccounts,
     approvedDrivers,
     deniedDrivers,
     totalRides,

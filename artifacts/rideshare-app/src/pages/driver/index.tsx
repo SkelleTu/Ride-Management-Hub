@@ -116,6 +116,15 @@ export default function DriverHome() {
     <div className="flex-1 flex flex-col overflow-y-auto">
       <DriverStatusBanner />
 
+      {user?.accountStatus === "pending" && (
+        <div className="mx-4 mt-2 flex items-start gap-2 bg-orange-500/10 border border-orange-500/30 rounded-xl p-3">
+          <AlertCircle className="w-4 h-4 text-orange-400 shrink-0 mt-0.5" />
+          <div className="text-xs text-orange-300 leading-relaxed">
+            <span className="font-semibold">Conta aguardando confirmação.</span> Você receberá acesso completo assim que confirmarmos seu cadastro.
+          </div>
+        </div>
+      )}
+
       {!isApproved ? (
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-3">
           <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center">
