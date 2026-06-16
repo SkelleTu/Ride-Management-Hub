@@ -857,8 +857,8 @@ export default function PassengerHome() {
                     onClick={() => { setSchedulingType("public"); setSelectedDriver(null); setDirectedToDriverId(null); setDriverSearch(""); }}
                     className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium border transition-all ${
                       schedulingType === "public"
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground hover:border-primary/50"
+                        ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                        : "border-border bg-secondary text-muted-foreground hover:text-foreground hover:border-border/80"
                     }`}
                   >
                     <Globe className="w-3.5 h-3.5" />
@@ -868,8 +868,8 @@ export default function PassengerHome() {
                     onClick={() => setSchedulingType("directed")}
                     className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium border transition-all ${
                       schedulingType === "directed"
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground hover:border-primary/50"
+                        ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                        : "border-border bg-secondary text-muted-foreground hover:text-foreground hover:border-border/80"
                     }`}
                   >
                     <User2 className="w-3.5 h-3.5" />
@@ -890,9 +890,9 @@ export default function PassengerHome() {
                     <User2 className="w-3 h-3" /> Motorista
                   </label>
                   {selectedDriver ? (
-                    <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-xl px-3 py-2.5">
-                      <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                        <User2 className="w-3.5 h-3.5 text-primary" />
+                    <div className="flex items-center gap-2 bg-secondary border border-border rounded-xl px-3 py-2.5">
+                      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0">
+                        <User2 className="w-3.5 h-3.5 text-foreground" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">{selectedDriver.name}</div>
