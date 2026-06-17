@@ -47,7 +47,10 @@ export async function registerBiometric(token: string): Promise<boolean> {
     },
     body: JSON.stringify(credential),
   });
-  if (!verifyRes.ok) throw new Error("Erro ao verificar biometria");
+  if (!verifyRes.ok) {
+    const body = await verifyRes.json().catch(() => ({}));
+    throw new Error(body?.error ?? "Erro ao verificar biometria");
+  }
   const result = await verifyRes.json();
   return result.verified === true;
 }

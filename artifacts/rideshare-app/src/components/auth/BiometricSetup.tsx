@@ -10,7 +10,7 @@ interface BiometricSetupProps {
   onDone: () => void;
 }
 
-type Stage = "ready" | "loading" | "done" | "blocked" | "no-hardware" | "skipped";
+type Stage = "ready" | "loading" | "done" | "blocked" | "no-hardware" | "skipped" | "error";
 
 function classifyError(err: any): "blocked" | "no-hardware" | "other" {
   const msg: string = (err?.message ?? err?.name ?? "").toLowerCase();
@@ -36,9 +36,11 @@ function classifyError(err: any): "blocked" | "no-hardware" | "other" {
 
 export function BiometricSetup({ token, email, onDone }: BiometricSetupProps) {
   const [stage, setStage] = useState<Stage>("ready");
+  const [errorMsg, setErrorMsg] = useState<string>("");
 
   const handleRegister = async () => {
     setStage("loading");
+    setErrorMsg("");
     try {
       const ok = await registerBiometric(token);
       if (ok) {
@@ -46,22 +48,30 @@ export function BiometricSetup({ token, email, onDone }: BiometricSetupProps) {
         setStage("done");
         setTimeout(onDone, 2000);
       } else {
-        setStage("ready");
+        setErrorMsg("Verificação não confirmada. Tente novamente.");
+        setStage("error");
       }
     } catch (err: any) {
-      // Ignore DOM-level errors (removeChild, etc.) that happen during WebAuthn native UI
       const msg: string = (err?.message ?? "").toLowerCase();
+      // Ignore DOM-level errors that happen during WebAuthn native UI cleanup
       if (msg.includes("removechild") || msg.includes("not a child") || msg.includes("insertbefore")) {
-        // The biometric may have actually succeeded — mark as done anyway
         try { setBiometricEmail(email); } catch {}
         setStage("done");
         setTimeout(onDone, 2000);
         return;
       }
+      // User cancelled — just go back to ready quietly
+      if (msg.includes("cancelled") || msg.includes("abort") || msg.includes("not allowed") && msg.includes("user")) {
+        setStage("ready");
+        return;
+      }
       const kind = classifyError(err);
       if (kind === "blocked") setStage("blocked");
       else if (kind === "no-hardware") setStage("no-hardware");
-      else setStage("ready");
+      else {
+        setErrorMsg(err?.message || "Ocorreu um erro ao registrar biometria.");
+        setStage("error");
+      }
     }
   };
 
@@ -85,7 +95,7 @@ export function BiometricSetup({ token, email, onDone }: BiometricSetupProps) {
             <div className="w-16 h-16 rounded-full bg-yellow-500/10 flex items-center justify-center">
               <ShieldAlert className="w-9 h-9 text-yellow-400" />
             </div>
-          ) : stage === "blocked" || stage === "no-hardware" ? (
+          ) : stage === "blocked" || stage === "no-hardware" || stage === "error" ? (
             <div className="w-16 h-16 rounded-full bg-orange-500/10 flex items-center justify-center">
               <ShieldAlert className="w-9 h-9 text-orange-400" />
             </div>
@@ -108,6 +118,7 @@ export function BiometricSetup({ token, email, onDone }: BiometricSetupProps) {
             {stage === "blocked"     && "Use pelo celular"}
             {stage === "no-hardware" && "Sem sensor biométrico"}
             {stage === "loading"     && "Aguardando sensor..."}
+            {stage === "error"       && "Falha ao registrar"}
             {stage === "ready"       && "Ativar biometria"}
           </h2>
           <p className="text-muted-foreground text-sm leading-relaxed">
@@ -121,6 +132,8 @@ export function BiometricSetup({ token, email, onDone }: BiometricSetupProps) {
               "Nenhum sensor biométrico encontrado agora. Acesse pelo celular para ativar Face ID ou digital."}
             {stage === "loading" &&
               "Use a digital ou olhe para a câmera frontal quando o celular pedir."}
+            {stage === "error" &&
+              <span className="text-orange-400">{errorMsg}</span>}
             {stage === "ready" && <>
               Cadastre sua <strong>digital ou Face ID</strong> para entrar no app sem precisar digitar senha.
               Nenhum dado biométrico sai do seu aparelho.
@@ -148,6 +161,17 @@ export function BiometricSetup({ token, email, onDone }: BiometricSetupProps) {
           <p className="text-xs text-muted-foreground animate-pulse">
             Siga as instruções do seu celular...
           </p>
+        )}
+
+        {stage === "error" && (
+          <div className="w-full flex flex-col gap-3">
+            <Button className="w-full h-12 gap-2 font-semibold" onClick={handleRegister}>
+              <RefreshCw className="w-4 h-4" /> Tentar novamente
+            </Button>
+            <Button variant="outline" className="w-full h-11" onClick={handleSkip}>
+              Continuar sem biometria
+            </Button>
+          </div>
         )}
 
         {(stage === "blocked" || stage === "no-hardware") && (

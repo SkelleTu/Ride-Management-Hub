@@ -12,10 +12,24 @@ import { requireAuth, generateToken } from "../lib/auth";
 export const webauthnRouter = Router();
 
 function getRpInfo() {
-  const domain = process.env.REPLIT_DEV_DOMAIN ?? process.env.REPLIT_DOMAINS?.split(",")[0]?.trim();
-  const rpID = domain ?? "localhost";
-  const origin = domain ? `https://${domain}` : "http://localhost:5000";
-  return { rpID, origin };
+  const devDomain = process.env.REPLIT_DEV_DOMAIN?.trim();
+  const allDomains = (process.env.REPLIT_DOMAINS ?? "")
+    .split(",")
+    .map((d) => d.trim())
+    .filter(Boolean);
+
+  const primaryDomain = devDomain ?? allDomains[0] ?? "localhost";
+  const rpID = primaryDomain;
+
+  const origins: string[] = [];
+  if (devDomain) origins.push(`https://${devDomain}`);
+  for (const d of allDomains) {
+    const o = `https://${d}`;
+    if (!origins.includes(o)) origins.push(o);
+  }
+  if (origins.length === 0) origins.push("http://localhost:5000");
+
+  return { rpID, origins };
 }
 
 const challengeStore = new Map<number, string>();
@@ -54,7 +68,7 @@ webauthnRouter.post("/register-verify", requireAuth, async (req, res) => {
     const verification = await verifyRegistrationResponse({
       response: req.body,
       expectedChallenge,
-      expectedOrigin: origin,
+      expectedOrigin: origins,
       expectedRPID: rpID,
     });
 
@@ -162,7 +176,7 @@ webauthnRouter.post("/authenticate-verify", async (req, res) => {
     const verification = await verifyAuthenticationResponse({
       response: credential,
       expectedChallenge,
-      expectedOrigin: origin,
+      expectedOrigin: origins,
       expectedRPID: rpID,
       credential: {
         id: storedCred.credentialId,
