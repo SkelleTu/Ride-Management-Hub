@@ -32,13 +32,13 @@ export default function AdminHome() {
         </div>
       ) : stats && (
         <div className="grid grid-cols-2 gap-3">
-          <Card className="col-span-2 bg-gradient-to-r from-primary/20 to-primary/5 border-primary/30">
+          <Card className="col-span-2">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <div className="text-sm text-muted-foreground">Receita Total</div>
-                <div className="text-3xl font-bold text-primary">R$ {stats.totalRevenue.toFixed(2)}</div>
+                <div className="text-3xl font-bold">R$ {stats.totalRevenue.toFixed(2)}</div>
               </div>
-              <TrendingUp className="w-10 h-10 text-primary opacity-50" />
+              <TrendingUp className="w-10 h-10 text-muted-foreground opacity-50" />
             </CardContent>
           </Card>
           {[
@@ -95,16 +95,16 @@ export default function AdminHome() {
       {/* Map access */}
       <button
         onClick={() => setLocation("/passenger")}
-        className="w-full flex items-center justify-between bg-primary/10 border border-primary/20 rounded-xl p-4 text-left hover:bg-primary/20 transition-colors"
+        className="w-full flex items-center justify-between bg-secondary rounded-xl p-4 text-left hover:bg-secondary/80 transition-colors"
       >
         <div className="flex items-center gap-3">
-          <Map className="w-5 h-5 text-primary" />
+          <Map className="w-5 h-5 text-muted-foreground" />
           <div>
-            <div className="font-semibold text-primary">Mapa ao Vivo</div>
+            <div className="font-semibold">Mapa ao Vivo</div>
             <div className="text-xs text-muted-foreground">Ver mapa de corridas como passageiro</div>
           </div>
         </div>
-        <ChevronRight className="w-5 h-5 text-primary" />
+        <ChevronRight className="w-5 h-5 text-muted-foreground" />
       </button>
 
       {/* Quick Nav */}

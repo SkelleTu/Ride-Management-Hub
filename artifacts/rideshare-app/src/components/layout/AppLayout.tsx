@@ -5,7 +5,7 @@ import { FloatingBackground } from "./FloatingBackground";
 
 export function AppLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="relative h-[100dvh] flex flex-col bg-background text-foreground overflow-hidden">
+    <div className="relative h-[100dvh] flex flex-col text-foreground overflow-hidden">
       <FloatingBackground />
       <div className="relative z-10 flex flex-col h-full">
         <Navbar />

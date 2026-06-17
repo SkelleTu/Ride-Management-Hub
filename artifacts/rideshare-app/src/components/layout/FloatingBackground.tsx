@@ -20,7 +20,7 @@ const FLOATING_ICONS = [
 
 export function FloatingBackground() {
   return (
-    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-background">
       {/* Gradient blobs */}
       <motion.div
         className="absolute w-[500px] h-[500px] rounded-full"
