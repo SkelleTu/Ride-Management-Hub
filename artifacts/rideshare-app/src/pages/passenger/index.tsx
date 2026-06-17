@@ -7,7 +7,7 @@ import { getListRidesQueryKey } from "@workspace/api-client-react";
 import MapView from "@/components/map/MapView";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronRight, Navigation, Loader2, Route, Hash, LocateFixed, Calendar, Clock, Radio, User2, FileText, Globe, AlertCircle, CheckCircle, MapPin } from "lucide-react";
+import { ChevronRight, Navigation, Loader2, Route, Hash, LocateFixed, Calendar, Clock, Radio, User2, FileText, Globe, AlertCircle, CheckCircle, MapPin, Plus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const PRICE_PER_KM = 2;
@@ -74,7 +74,7 @@ interface DriverOption {
   vehiclePlate: string | null;
 }
 
-async function fetchRoute(origin: LocationPoint, destination: LocationPoint): Promise<{
+async function fetchRoute(origin: LocationPoint, destination: LocationPoint, stops: LocationPoint[] = []): Promise<{
   distanceKm: number;
   durationSeconds: number;
   routePoints: [number, number][];
@@ -84,6 +84,9 @@ async function fetchRoute(origin: LocationPoint, destination: LocationPoint): Pr
       olng: String(origin.lng), olat: String(origin.lat),
       dlng: String(destination.lng), dlat: String(destination.lat),
     });
+    if (stops.length > 0) {
+      params.set("waypoints", JSON.stringify(stops.map(s => ({ lat: s.lat, lng: s.lng }))));
+    }
     const r = await fetch(`/api/proxy/route?${params}`);
     const data = await r.json();
     if (data.code !== "Ok" || !data.routes?.[0]) return null;
@@ -145,11 +148,17 @@ export default function PassengerHome() {
   const [scheduledNote, setScheduledNote] = useState("");
   const driverDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── Stops (waypoints) ─────────────────────────────────────────────────
+  const [stops, setStops] = useState<(LocationPoint | null)[]>([]);
+  const [stopQueries, setStopQueries] = useState<string[]>([]);
+  const [stopSuggestions, setStopSuggestions] = useState<any[][]>([]);
+  const stopDebounceRefs = useRef<(ReturnType<typeof setTimeout> | null)[]>([]);
+
   // ── Active map field (which pin map clicks go to) ──────────────────────
   const [activeField, setActiveField] = useState<"origin" | "destination">("origin");
 
-  // ── Page step: "form" shows only the form; "waiting" shows map + radar ─
-  const [step, setStep] = useState<"form" | "waiting">("form");
+  // ── Page step: "form" | "mappin" (mobile map adjust) | "waiting" ──────
+  const [step, setStep] = useState<"form" | "mappin" | "waiting">("form");
   const [pendingRideId, setPendingRideId] = useState<number | null>(null);
 
   // ── Drag-pin state ─────────────────────────────────────────────────────
@@ -273,7 +282,8 @@ export default function PassengerHome() {
       return;
     }
     setIsCalculating(true);
-    fetchRoute(origin, destination).then((result) => {
+    const validStops = stops.filter(Boolean) as LocationPoint[];
+    fetchRoute(origin, destination, validStops).then((result) => {
       setIsCalculating(false);
       if (result) {
         setDistanceKm(result.distanceKm);
@@ -282,7 +292,7 @@ export default function PassengerHome() {
         setOfferedPrice((result.distanceKm * PRICE_PER_KM).toFixed(2));
       }
     });
-  }, [origin, destination]);
+  }, [origin, destination, stops]);
 
   const searchAddress = (query: string, type: "origin" | "dest") => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -471,6 +481,49 @@ export default function PassengerHome() {
     setTimeout(() => setDestDragState(null), 4000);
   }, [destination, toast]);
 
+  // ── Stop management ────────────────────────────────────────────────────
+  const addStop = () => {
+    setStops(prev => [...prev, null]);
+    setStopQueries(prev => [...prev, ""]);
+    setStopSuggestions(prev => [...prev, []]);
+    stopDebounceRefs.current.push(null);
+  };
+
+  const removeStop = (index: number) => {
+    setStops(prev => prev.filter((_, i) => i !== index));
+    setStopQueries(prev => prev.filter((_, i) => i !== index));
+    setStopSuggestions(prev => prev.filter((_, i) => i !== index));
+    stopDebounceRefs.current = stopDebounceRefs.current.filter((_, i) => i !== index);
+  };
+
+  const searchStopAddress = (query: string, index: number) => {
+    if (stopDebounceRefs.current[index]) clearTimeout(stopDebounceRefs.current[index]!);
+    if (query.length < 3) {
+      setStopSuggestions(prev => prev.map((s, i) => i === index ? [] : s));
+      return;
+    }
+    stopDebounceRefs.current[index] = setTimeout(async () => {
+      try {
+        const r = await fetch(`/api/proxy/geocode?q=${encodeURIComponent(query)}`);
+        if (!r.ok) return;
+        const data = await r.json();
+        if (Array.isArray(data)) {
+          setStopSuggestions(prev => prev.map((s, i) => i === index ? data : s));
+        }
+      } catch {}
+    }, 800);
+  };
+
+  const selectStopAddress = (item: any, index: number) => {
+    const fullAddress = item.postcode
+      ? `${item.display_name} — CEP ${item.postcode}`
+      : item.display_name;
+    const point: LocationPoint = { address: fullAddress, lat: parseFloat(item.lat), lng: parseFloat(item.lon) };
+    setStops(prev => prev.map((s, i) => i === index ? point : s));
+    setStopQueries(prev => prev.map((q, i) => i === index ? item.display_name.split(",")[0] : q));
+    setStopSuggestions(prev => prev.map((s, i) => i === index ? [] : s));
+  };
+
   const handleSubmit = () => {
     if (!origin || !destination || !offeredPrice) {
       toast({ title: "Preencha todos os campos", variant: "destructive" });
@@ -499,6 +552,7 @@ export default function PassengerHome() {
       }
     }
 
+    const validStops = stops.filter(Boolean) as LocationPoint[];
     const rideData: any = {
       originAddress: buildFinalAddress(origin.address, originNumber),
       originLat: origin.lat,
@@ -509,6 +563,9 @@ export default function PassengerHome() {
       offeredPrice: price,
       estimatedDistance: distanceKm ?? undefined,
       estimatedDuration: durationSeconds ? Math.round(durationSeconds) : undefined,
+      ...(validStops.length > 0 && {
+        stops: validStops.map((s, i) => ({ address: s.address, lat: s.lat, lng: s.lng, order: i + 1 })),
+      }),
     };
 
     if (isScheduling) {
@@ -552,9 +609,9 @@ export default function PassengerHome() {
         }
       `}</style>
 
-      {/* Map — hidden on mobile while filling form; full-screen on mobile when waiting */}
+      {/* Map — hidden on mobile while filling form; full-screen when waiting or adjusting pins */}
       <div className={`fixed z-0 md:top-20 md:bottom-0 md:left-96 md:right-0
-        ${step === "waiting"
+        ${step === "waiting" || step === "mappin"
           ? "top-20 bottom-16 left-0 right-0"
           : "hidden md:block"
         }`}>
@@ -562,13 +619,28 @@ export default function PassengerHome() {
           origin={origin}
           destination={destination}
           routePoints={routePoints}
-          onMapClick={handleMapClick}
+          waypoints={stops.filter(Boolean).map(s => ({ lat: s!.lat, lng: s!.lng }))}
+          onMapClick={step === "mappin" ? undefined : handleMapClick}
           onOriginDragEnd={origin ? handleOriginDragEnd : undefined}
           onDestinationDragEnd={destination ? handleDestDragEnd : undefined}
           passengerPhotoUrl={user?.avatarUrl ?? null}
           passengerLabel={user?.name ? user.name.split(" ").slice(0, 2).join(" ") : "Você"}
           className="h-full w-full"
         />
+
+        {/* Map-pin adjust overlay — mobile only, shown during mappin step */}
+        {step === "mappin" && (
+          <div className="absolute inset-x-0 bottom-4 z-20 flex flex-col items-center px-4 pointer-events-none">
+            <div className="pointer-events-auto w-full max-w-sm bg-card/95 backdrop-blur-md rounded-2xl p-4 shadow-xl border border-border space-y-2">
+              <p className="text-xs text-center text-muted-foreground">
+                Arraste os pins <span className="text-foreground font-medium">verde</span> (embarque) e <span className="text-foreground font-medium">vermelho</span> (destino) para ajustar o ponto exato
+              </p>
+              <Button onClick={() => setStep("form")} className="w-full h-11 rounded-xl font-semibold">
+                <CheckCircle className="w-4 h-4 mr-2" /> Confirmar pontos
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Radar overlay — shown on both mobile and desktop when waiting */}
         {step === "waiting" && (
@@ -737,7 +809,62 @@ export default function PassengerHome() {
             )}
           </div>
 
-          {/* Map pin mode selector */}
+          {/* Stops (waypoints) */}
+          {stops.map((stop, idx) => (
+            <div key={idx} className="space-y-0">
+              <div className="relative">
+                <div className={`flex items-center gap-2 bg-secondary rounded-xl px-3 py-2.5 border transition-colors ${stop ? "border-amber-500/30" : "border-border focus-within:border-amber-500/50"}`}>
+                  <div className="flex items-center justify-center w-4 h-4 rounded-full bg-amber-500 text-black text-[9px] font-bold shrink-0 leading-none">
+                    {idx + 1}
+                  </div>
+                  <Input
+                    placeholder={`Parada ${idx + 1} — endereço intermediário`}
+                    value={stopQueries[idx] ?? ""}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    onChange={(e) => {
+                      const q = e.target.value;
+                      setStopQueries(prev => prev.map((v, i) => i === idx ? q : v));
+                      setStops(prev => prev.map((s, i) => i === idx ? null : s));
+                      searchStopAddress(q, idx);
+                    }}
+                    className="border-none bg-transparent p-0 h-auto text-sm focus-visible:ring-0"
+                  />
+                  <button
+                    onClick={() => removeStop(idx)}
+                    className="text-muted-foreground hover:text-destructive transition-colors shrink-0 ml-1"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                {(stopSuggestions[idx]?.length ?? 0) > 0 && (
+                  <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
+                    {stopSuggestions[idx].map((s: any) => (
+                      <button key={`${s.lat}-${s.lon}`} onMouseDown={(e) => { e.preventDefault(); selectStopAddress(s, idx); }}
+                        className="w-full text-left px-3 py-2.5 text-sm hover:bg-secondary transition-colors border-b border-border last:border-0">
+                        <div className="font-medium truncate">{s.display_name.split(",")[0]}</div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {s.display_name.split(",").slice(1, 3).join(",")}
+                          {s.postcode ? ` · CEP ${s.postcode}` : ""}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {/* Add stop button */}
+          <button
+            onClick={addStop}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-0.5 pl-1"
+          >
+            <Plus className="w-3.5 h-3.5" /> Adicionar parada
+          </button>
+
           {/* Tap-on-map hint — compact single line, only before addresses are set */}
           {(!origin || !destination) && (
             <p className="text-[10px] text-muted-foreground/60 text-center">
@@ -995,6 +1122,14 @@ export default function PassengerHome() {
           {/* Price + submit — only when both points are set */}
           {origin && destination && (
             <>
+              {/* Mobile: adjust pins on map */}
+              <button
+                onClick={() => setStep("mappin")}
+                className="md:hidden flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-border bg-secondary/60 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              >
+                <MapPin className="w-3.5 h-3.5" /> Ajustar pins no mapa
+              </button>
+
               <div className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2.5 border border-border focus-within:border-primary transition-colors">
                 <span className="text-primary font-semibold text-sm shrink-0">R$</span>
                 <Input

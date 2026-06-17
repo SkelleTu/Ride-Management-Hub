@@ -71,10 +71,17 @@ router.get("/cep/:cep", async (req, res) => {
 });
 
 router.get("/route", async (req, res) => {
-  const { olng, olat, dlng, dlat } = req.query;
+  const { olng, olat, dlng, dlat, waypoints } = req.query;
   if (!olng || !olat || !dlng || !dlat) return res.status(400).json({ error: "coords required" });
   try {
-    const url = `https://router.project-osrm.org/route/v1/driving/${olng},${olat};${dlng},${dlat}?overview=full&geometries=geojson`;
+    let waypointStr = "";
+    if (waypoints && typeof waypoints === "string") {
+      try {
+        const wps = JSON.parse(waypoints) as { lat: number; lng: number }[];
+        waypointStr = wps.map(w => `;${w.lng},${w.lat}`).join("");
+      } catch {}
+    }
+    const url = `https://router.project-osrm.org/route/v1/driving/${olng},${olat}${waypointStr};${dlng},${dlat}?overview=full&geometries=geojson`;
     const r = await fetch(url);
     const data = await r.json();
     res.json(data);

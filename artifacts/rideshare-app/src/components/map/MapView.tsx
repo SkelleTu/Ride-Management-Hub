@@ -10,6 +10,7 @@ interface MapViewProps {
   passengerLabel?: string;
   driverLabel?: string;
   routePoints?: [number, number][];
+  waypoints?: { lat: number; lng: number }[];
   onMapClick?: (lat: number, lng: number) => void;
   onOriginDragEnd?: (lat: number, lng: number) => void;
   onDestinationDragEnd?: (lat: number, lng: number) => void;
@@ -275,17 +276,35 @@ function MapCompass({ mouseHeading = null }: MapCompassProps) {
   );
 }
 
+function makeStopIcon(index: number) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      width:30px;height:30px;border-radius:50%;
+      background:#f59e0b;border:3px solid #fbbf24;
+      display:flex;align-items:center;justify-content:center;
+      font-size:12px;font-weight:800;color:#000;
+      box-shadow:0 2px 8px rgba(0,0,0,0.5);
+    ">${index + 1}</div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -18],
+  });
+}
+
 function MapView({
   origin, destination, driverPosition,
   passengerPhotoUrl, driverPhotoUrl,
   passengerLabel, driverLabel,
-  routePoints, onMapClick,
+  routePoints, waypoints,
+  onMapClick,
   onOriginDragEnd, onDestinationDragEnd,
   className = "h-full w-full"
 }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
   const markersRef = useRef<{ origin?: L.Marker; destination?: L.Marker; driver?: L.Marker }>({});
+  const stopMarkersRef = useRef<L.Marker[]>([]);
   const polylineRef = useRef<L.Polyline | null>(null);
   const draggingRef = useRef<{ origin: boolean; destination: boolean }>({ origin: false, destination: false });
   const [mouseHeading, setMouseHeading] = useState<number | null>(null);
@@ -459,6 +478,21 @@ function MapView({
         .addTo(mapInstance.current!);
     }
   }, [driverPosition, driverPhotoUrl, driverLabel]);
+
+  // Stop / waypoint markers
+  useEffect(() => {
+    if (!mapInstance.current) return;
+    stopMarkersRef.current.forEach(m => { try { mapInstance.current!.removeLayer(m); } catch {} });
+    stopMarkersRef.current = [];
+    if (waypoints && waypoints.length > 0) {
+      waypoints.forEach((wp, idx) => {
+        const marker = L.marker([wp.lat, wp.lng], { icon: makeStopIcon(idx) })
+          .bindTooltip(`Parada ${idx + 1}`, { permanent: false, direction: 'top' })
+          .addTo(mapInstance.current!);
+        stopMarkersRef.current.push(marker);
+      });
+    }
+  }, [waypoints]);
 
   // Polyline
   useEffect(() => {
