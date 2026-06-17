@@ -22,12 +22,21 @@ function getRpInfo() {
   const rpID = primaryDomain;
 
   const origins: string[] = [];
-  if (devDomain) origins.push(`https://${devDomain}`);
-  for (const d of allDomains) {
-    const o = `https://${d}`;
-    if (!origins.includes(o)) origins.push(o);
+  const addOrigin = (base: string) => {
+    if (!origins.includes(base)) origins.push(base);
+    // Also accept variants with common dev ports the browser may append
+    for (const port of [5000, 3000, 443, 80]) {
+      const withPort = `${base}:${port}`;
+      if (!origins.includes(withPort)) origins.push(withPort);
+    }
+  };
+
+  if (devDomain) addOrigin(`https://${devDomain}`);
+  for (const d of allDomains) addOrigin(`https://${d}`);
+  if (origins.length === 0) {
+    origins.push("http://localhost:5000");
+    origins.push("http://localhost:3000");
   }
-  if (origins.length === 0) origins.push("http://localhost:5000");
 
   return { rpID, origins };
 }
