@@ -116,8 +116,8 @@ export function LocationGuard({ children }: LocationGuardProps) {
         className="fixed inset-0 z-[9999] flex flex-col items-center justify-center p-6 text-center"
         style={{ background: "rgba(10,10,15,0.97)", backdropFilter: "blur(8px)" }}
       >
-        <div className="mb-6 w-20 h-20 rounded-3xl bg-primary/20 flex items-center justify-center">
-          <MapPin className="w-10 h-10 text-primary" />
+        <div className="mb-6 w-20 h-20 rounded-3xl bg-primary flex items-center justify-center">
+          <MapPin className="w-10 h-10 text-white" />
         </div>
 
         <h2 className="text-2xl font-bold mb-3">Localização obrigatória</h2>
