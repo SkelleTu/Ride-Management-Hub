@@ -88,24 +88,24 @@ export function BiometricSetup({ token, email, onDone }: BiometricSetupProps) {
         {/* Icon */}
         <div className="flex justify-center">
           {stage === "done" ? (
-            <div className="w-16 h-16 rounded-full bg-green-500/15 flex items-center justify-center animate-in zoom-in duration-300">
-              <CheckCircle2 className="w-10 h-10 text-green-500" />
+            <div className="w-20 h-20 rounded-full flex items-center justify-center animate-in zoom-in duration-300" style={{ background: "rgba(34,197,94,0.18)", boxShadow: "0 0 0 4px rgba(34,197,94,0.10)" }}>
+              <CheckCircle2 className="w-11 h-11" strokeWidth={2.5} style={{ color: "#22c55e" }} />
             </div>
           ) : stage === "skipped" ? (
-            <div className="w-16 h-16 rounded-full bg-yellow-500/10 flex items-center justify-center">
-              <ShieldAlert className="w-9 h-9 text-yellow-400" />
+            <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ background: "rgba(234,179,8,0.15)", boxShadow: "0 0 0 4px rgba(234,179,8,0.08)" }}>
+              <ShieldAlert className="w-11 h-11" strokeWidth={2.5} style={{ color: "#eab308" }} />
             </div>
           ) : stage === "blocked" || stage === "no-hardware" || stage === "error" ? (
-            <div className="w-16 h-16 rounded-full bg-orange-500/10 flex items-center justify-center">
-              <ShieldAlert className="w-9 h-9 text-orange-400" />
+            <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ background: "rgba(249,115,22,0.15)", boxShadow: "0 0 0 4px rgba(249,115,22,0.08)" }}>
+              <ShieldAlert className="w-11 h-11" strokeWidth={2.5} style={{ color: "#fb923c" }} />
             </div>
           ) : stage === "loading" ? (
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <Loader2 className="w-9 h-9 text-primary animate-spin" />
+            <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ background: "rgba(99,102,241,0.15)", boxShadow: "0 0 0 4px rgba(99,102,241,0.10)" }}>
+              <Loader2 className="w-11 h-11 animate-spin" strokeWidth={2.5} style={{ color: "#818cf8" }} />
             </div>
           ) : (
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center ring-2 ring-primary/20">
-              <ScanFace className="w-9 h-9 text-primary" />
+            <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ background: "rgba(99,102,241,0.15)", boxShadow: "0 0 0 4px rgba(99,102,241,0.12), 0 0 0 8px rgba(99,102,241,0.05)" }}>
+              <ScanFace className="w-11 h-11" strokeWidth={2.5} style={{ color: "#818cf8" }} />
             </div>
           )}
         </div>
