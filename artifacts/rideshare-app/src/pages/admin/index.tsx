@@ -92,20 +92,6 @@ export default function AdminHome() {
         </button>
       )}
 
-      {/* Map access */}
-      <button
-        onClick={() => setLocation("/passenger")}
-        className="w-full flex items-center justify-between bg-secondary rounded-xl p-4 text-left hover:bg-secondary/80 transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          <Map className="w-5 h-5 text-muted-foreground" />
-          <div>
-            <div className="font-semibold">Mapa ao Vivo</div>
-            <div className="text-xs text-muted-foreground">Ver mapa de corridas como passageiro</div>
-          </div>
-        </div>
-        <ChevronRight className="w-5 h-5 text-muted-foreground" />
-      </button>
 
       {/* Quick Nav */}
       <div className="grid grid-cols-2 gap-3">
