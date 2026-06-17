@@ -9,7 +9,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <FloatingBackground />
       <div className="relative z-10 flex flex-col h-full">
         <Navbar />
-        <main className="flex-1 flex flex-col pb-[env(safe-area-inset-bottom)]">
+        <main className="flex-1 flex flex-col overflow-hidden pb-[env(safe-area-inset-bottom)]">
           {children}
         </main>
         <BottomNav />
