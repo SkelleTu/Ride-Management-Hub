@@ -56,7 +56,7 @@ webauthnRouter.post("/register-options", requireAuth, async (req, res) => {
 
 webauthnRouter.post("/register-verify", requireAuth, async (req, res) => {
   const user = (req as any).user;
-  const { rpID, origin } = getRpInfo();
+  const { rpID, origins } = getRpInfo();
   const expectedChallenge = challengeStore.get(user.id);
 
   if (!expectedChallenge) {
@@ -146,7 +146,7 @@ webauthnRouter.post("/authenticate-verify", async (req, res) => {
     return;
   }
 
-  const { rpID, origin } = getRpInfo();
+  const { rpID, origins } = getRpInfo();
   const expectedChallenge = authChallengeStore.get(email);
 
   if (!expectedChallenge) {
