@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
+import { playSound } from "@/lib/sounds";
 import { useGetRide, getGetRideQueryKey, useUpdateRideStatus } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
@@ -80,11 +81,31 @@ export default function DriverRide({ params }: { params: { id: string } }) {
   const [completedPassengerName, setCompletedPassengerName] = useState("");
   const [completedRideId, setCompletedRideId] = useState<number | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const prevStatusRef = useRef<string | null>(null);
+  const prevMsgCountRef = useRef<number>(0);
+  const isFirstMsgFetchRef = useRef(true);
 
   const { data: ride, isLoading } = useGetRide(id, {
     query: { queryKey: getGetRideQueryKey(id), refetchInterval: 5000 }
   });
   const updateStatus = useUpdateRideStatus();
+
+  // Sound on ride status transitions
+  useEffect(() => {
+    if (!ride) return;
+    const prev = prevStatusRef.current;
+    const curr = ride.status;
+    if (prev !== null && prev !== curr) {
+      if (curr === "in_progress") {
+        playSound("tripStarted");
+      } else if (curr === "completed") {
+        playSound("tripCompleted");
+      } else if (curr === "cancelled") {
+        playSound("rideCancelled");
+      }
+    }
+    prevStatusRef.current = curr;
+  }, [ride?.status]);
 
   // GPS broadcast — send position every 6s
   useEffect(() => {
@@ -109,11 +130,25 @@ export default function DriverRide({ params }: { params: { id: string } }) {
     return () => { active = false; clearInterval(interval); };
   }, [id]);
 
-  // Poll messages every 3s when chat is open
+  // Poll messages every 3s when chat is open; play sound on new incoming message
   useEffect(() => {
     const load = async () => {
       const r = await apiGet(`/api/rides/${id}/messages`);
-      if (r.ok) setMessages(await r.json());
+      if (!r.ok) return;
+      const msgs: Message[] = await r.json();
+      if (isFirstMsgFetchRef.current) {
+        isFirstMsgFetchRef.current = false;
+        prevMsgCountRef.current = msgs.length;
+        setMessages(msgs);
+        return;
+      }
+      if (msgs.length > prevMsgCountRef.current) {
+        const newMsgs = msgs.slice(prevMsgCountRef.current);
+        const hasIncoming = newMsgs.some(m => m.senderId !== user?.id);
+        if (hasIncoming) playSound("notification");
+      }
+      prevMsgCountRef.current = msgs.length;
+      setMessages(msgs);
     };
     load();
     if (!chatOpen) return;

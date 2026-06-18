@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useQuery } from "@tanstack/react-query";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Navigation, Clock, ChevronRight, Car, Lock, Star, MapPin, Zap, AlertCircle } from "lucide-react";
 import { DriverStatusBanner } from "@/components/driver/DriverStatusBanner";
+import { playSound } from "@/lib/sounds";
 
 async function fetchMyDriverProfile() {
   const token = localStorage.getItem("token");
@@ -69,12 +70,34 @@ export default function DriverHome() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [showScores, setShowScores] = useState<number | null>(null);
+  const prevRideIdsRef = useRef<Set<number>>(new Set());
+  const isFirstFetchRef = useRef(true);
 
   const { data: smartRides = [], isLoading, refetch } = useQuery<SmartRideEntry[]>({
     queryKey: ["dispatch-active-fits"],
     queryFn: fetchSmartRides,
     refetchInterval: 10000,
   });
+
+  // Play sound when new ride requests appear
+  useEffect(() => {
+    if (smartRides.length === 0) {
+      isFirstFetchRef.current = false;
+      prevRideIdsRef.current = new Set();
+      return;
+    }
+    const currentIds = new Set(smartRides.map(e => e.ride.id));
+    if (isFirstFetchRef.current) {
+      isFirstFetchRef.current = false;
+      prevRideIdsRef.current = currentIds;
+      return;
+    }
+    const hasNew = smartRides.some(e => !prevRideIdsRef.current.has(e.ride.id));
+    if (hasNew) {
+      playSound("newRideRequest");
+    }
+    prevRideIdsRef.current = currentIds;
+  }, [smartRides]);
 
   const { data: profile } = useQuery({
     queryKey: ["driver-profile-me", user?.id],

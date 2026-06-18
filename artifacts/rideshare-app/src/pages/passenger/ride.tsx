@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
+import { playSound } from "@/lib/sounds";
 import { useGetRide, getGetRideQueryKey, useListOffers, getListOffersQueryKey, useAcceptOffer, useRejectOffer } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
@@ -78,6 +79,8 @@ export default function PassengerRide({ params }: { params: { id: string } }) {
   const [ratedRideId, setRatedRideId] = useState<number | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const prevStatusRef = useRef<string | null>(null);
+  const prevOfferCountRef = useRef<number>(0);
+  const isFirstOfferFetchRef = useRef(true);
 
   const { data: ride, isLoading } = useGetRide(id, { query: { queryKey: getGetRideQueryKey(id), refetchInterval: 5000 } });
   const { data: offers = [] } = useListOffers(id, { query: { queryKey: getListOffersQueryKey(id), refetchInterval: 5000 } });
@@ -86,17 +89,51 @@ export default function PassengerRide({ params }: { params: { id: string } }) {
 
   const isConnected = ride?.status === "accepted" || ride?.status === "in_progress";
 
-  // Detect status transitions
+  // "Driver arriving" sound when driver gets within ~400m of pickup
+  const arrivedAlertRef = useRef(false);
+  useEffect(() => {
+    if (!ride || ride.status !== "accepted") { arrivedAlertRef.current = false; return; }
+    const driverLat = ride.driverLat;
+    const driverLng = ride.driverLng;
+    if (!driverLat || !driverLng) return;
+    const R = 6371000;
+    const φ1 = (driverLat * Math.PI) / 180, φ2 = (ride.originLat * Math.PI) / 180;
+    const Δφ = ((ride.originLat - driverLat) * Math.PI) / 180;
+    const Δλ = ((ride.originLng - driverLng) * Math.PI) / 180;
+    const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+    const distMeters = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    if (distMeters < 400 && !arrivedAlertRef.current) {
+      arrivedAlertRef.current = true;
+      playSound("driverArriving");
+      toast({ title: "🚗 Motorista chegando!", description: "Seu motorista está a menos de 400m de você." });
+    }
+  }, [ride?.driverLat, ride?.driverLng]);
+
+  // Detect status transitions → sounds
   useEffect(() => {
     if (!ride) return;
     const prev = prevStatusRef.current;
     const curr = ride.status;
-    if ((prev === "accepted" || prev === "in_progress") && curr === "open") {
-      toast({
-        title: "O motorista cancelou a corrida",
-        description: "Não se preocupe — estamos buscando novos motoristas para você.",
-      });
+
+    if (prev !== null && prev !== curr) {
+      if (curr === "accepted") {
+        playSound("rideAccepted");
+        toast({ title: "Motorista a caminho!", description: "Seu motorista foi confirmado e está indo até você." });
+      } else if (curr === "in_progress") {
+        playSound("tripStarted");
+      } else if (curr === "completed") {
+        playSound("tripCompleted");
+      } else if (curr === "cancelled") {
+        playSound("rideCancelled");
+      } else if ((prev === "accepted" || prev === "in_progress") && curr === "open") {
+        playSound("rideCancelled");
+        toast({
+          title: "O motorista cancelou a corrida",
+          description: "Não se preocupe — estamos buscando novos motoristas para você.",
+        });
+      }
     }
+
     // Show rating modal when ride transitions to completed
     if (prev === "in_progress" && curr === "completed") {
       if (ratedRideId !== ride.id) {
@@ -106,6 +143,20 @@ export default function PassengerRide({ params }: { params: { id: string } }) {
     }
     prevStatusRef.current = curr;
   }, [ride?.status]);
+
+  // Play sound when new driver offers arrive
+  useEffect(() => {
+    const pending = offers.filter(o => o.status === "pending");
+    if (isFirstOfferFetchRef.current) {
+      isFirstOfferFetchRef.current = false;
+      prevOfferCountRef.current = pending.length;
+      return;
+    }
+    if (pending.length > prevOfferCountRef.current) {
+      playSound("offerReceived");
+    }
+    prevOfferCountRef.current = pending.length;
+  }, [offers]);
 
   // Passenger broadcasts GPS every 6s when ride is active
   useEffect(() => {
@@ -133,11 +184,27 @@ export default function PassengerRide({ params }: { params: { id: string } }) {
     return () => { active = false; clearInterval(interval); };
   }, [id, isConnected]);
 
-  // Poll messages every 3s when chat open
+  // Poll messages every 3s when chat open; play sound on new incoming message
+  const prevMsgCountRef = useRef<number>(0);
+  const isFirstMsgFetchRef = useRef(true);
   useEffect(() => {
     const load = async () => {
       const r = await apiGet(`/api/rides/${id}/messages`);
-      if (r.ok) setMessages(await r.json());
+      if (!r.ok) return;
+      const msgs: Message[] = await r.json();
+      if (isFirstMsgFetchRef.current) {
+        isFirstMsgFetchRef.current = false;
+        prevMsgCountRef.current = msgs.length;
+        setMessages(msgs);
+        return;
+      }
+      if (msgs.length > prevMsgCountRef.current) {
+        const newMsgs = msgs.slice(prevMsgCountRef.current);
+        const hasIncoming = newMsgs.some(m => m.senderId !== user?.id);
+        if (hasIncoming) playSound("notification");
+      }
+      prevMsgCountRef.current = msgs.length;
+      setMessages(msgs);
     };
     load();
     if (!chatOpen) return;

@@ -511,6 +511,7 @@ function MapView({
   return (
     <div
       className={`${className} relative`}
+      style={{ isolation: 'isolate' }}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
     >
