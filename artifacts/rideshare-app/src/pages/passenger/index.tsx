@@ -160,6 +160,23 @@ export default function PassengerHome() {
   // ── Page step: "form" | "mappin" (mobile map adjust) | "waiting" ──────
   const [step, setStep] = useState<"form" | "mappin" | "waiting">("form");
   const [pendingRideId, setPendingRideId] = useState<number | null>(null);
+  const [cancellingWait, setCancellingWait] = useState(false);
+
+  const handleCancelWaiting = async () => {
+    if (!pendingRideId) { setStep("form"); return; }
+    setCancellingWait(true);
+    try {
+      const token = localStorage.getItem("token");
+      await fetch(`/api/rides/${pendingRideId}/cancel`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ reason: "Passageiro cancelou antes de encontrar motorista" }),
+      });
+    } catch { /* ignore */ }
+    setCancellingWait(false);
+    setPendingRideId(null);
+    setStep("form");
+  };
 
   // ── Drag-pin state ─────────────────────────────────────────────────────
   const [originDragState, setOriginDragState] = useState<DragState>(null);
@@ -664,10 +681,22 @@ export default function PassengerHome() {
                 <MapPin className="w-6 h-6 text-primary fill-primary/30" />
               </span>
             </div>
-            {/* Text card */}
-            <div className="bg-background/80 backdrop-blur-md rounded-2xl px-6 py-4 mx-6 text-center shadow-xl border border-border/50">
-              <p className="text-foreground font-semibold text-base leading-snug">Solicitando viagem…</p>
-              <p className="text-muted-foreground text-sm mt-1 leading-snug">Aguarde um motorista confirmar<br/>sua solicitação</p>
+            {/* Text card + cancel button */}
+            <div className="pointer-events-auto bg-background/80 backdrop-blur-md rounded-2xl px-6 py-4 mx-6 text-center shadow-xl border border-border/50 space-y-3">
+              <div>
+                <p className="text-foreground font-semibold text-base leading-snug">Solicitando viagem…</p>
+                <p className="text-muted-foreground text-sm mt-1 leading-snug">Aguarde um motorista confirmar<br/>sua solicitação</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCancelWaiting}
+                disabled={cancellingWait}
+                className="w-full border-destructive/40 text-destructive hover:bg-destructive/10"
+              >
+                <X className="w-3.5 h-3.5 mr-1.5" />
+                {cancellingWait ? "Cancelando…" : "Cancelar solicitação"}
+              </Button>
             </div>
           </div>
         )}
@@ -687,7 +716,7 @@ export default function PassengerHome() {
 
           {/* Desktop waiting state — shown in sidebar when waiting on large screens */}
           {step === "waiting" && (
-            <div className="flex flex-col items-center justify-center h-full gap-6 py-12">
+            <div className="flex flex-col items-center justify-center h-full gap-6 py-12 px-4">
               <div className="relative flex items-center justify-center">
                 {[0, 1, 2, 3].map(i => (
                   <span
@@ -705,10 +734,19 @@ export default function PassengerHome() {
                   <MapPin className="w-5 h-5 text-primary fill-primary/30" />
                 </span>
               </div>
-              <div className="text-center px-4">
+              <div className="text-center px-4 space-y-2">
                 <p className="font-semibold text-base">Solicitando viagem…</p>
-                <p className="text-muted-foreground text-sm mt-2 leading-relaxed">Aguarde um motorista confirmar sua solicitação</p>
+                <p className="text-muted-foreground text-sm leading-relaxed">Aguarde um motorista confirmar sua solicitação</p>
               </div>
+              <Button
+                variant="outline"
+                onClick={handleCancelWaiting}
+                disabled={cancellingWait}
+                className="w-full border-destructive/40 text-destructive hover:bg-destructive/10"
+              >
+                <X className="w-4 h-4 mr-2" />
+                {cancellingWait ? "Cancelando…" : "Cancelar solicitação"}
+              </Button>
             </div>
           )}
 
