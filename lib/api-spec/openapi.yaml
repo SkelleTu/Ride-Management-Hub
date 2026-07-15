@@ -1,22 +1,33 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: UPcar - ride sharing API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: users
+    description: User management
+  - name: drivers
+    description: Driver profiles and approval
+  - name: rides
+    description: Ride requests and trips
+  - name: offers
+    description: Driver fare offers
+  - name: admin
+    description: Admin / owner operations
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +35,1195 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── AUTH ──────────────────────────────────────────────────────────────────
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: OK
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+
+  # ── USERS ─────────────────────────────────────────────────────────────────
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all users (admin)
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [passenger, driver, admin]
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+  /users/{id}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get user by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateUser
+      tags: [users]
+      summary: Update user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Delete user (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── DRIVER PROFILES ───────────────────────────────────────────────────────
+  /drivers:
+    get:
+      operationId: listDrivers
+      tags: [drivers]
+      summary: List driver profiles
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, denied]
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DriverProfile"
+    post:
+      operationId: createDriverProfile
+      tags: [drivers]
+      summary: Submit driver registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DriverProfileInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DriverProfile"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /drivers/{id}:
+    get:
+      operationId: getDriverProfile
+      tags: [drivers]
+      summary: Get driver profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DriverProfile"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /drivers/{id}/approve:
+    patch:
+      operationId: approveDriver
+      tags: [drivers]
+      summary: Approve driver (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DriverDecisionInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DriverProfile"
+
+  /drivers/{id}/deny:
+    patch:
+      operationId: denyDriver
+      tags: [drivers]
+      summary: Deny driver (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DriverDecisionInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DriverProfile"
+
+  # ── RIDES ────────────────────────────────────────────────────────────────
+  /rides:
+    get:
+      operationId: listRides
+      tags: [rides]
+      summary: List rides
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, negotiating, accepted, in_progress, completed, cancelled]
+        - name: passengerId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: driverId
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ride"
+    post:
+      operationId: createRide
+      tags: [rides]
+      summary: Create ride request (passenger)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RideInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ride"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /rides/availability:
+    get:
+      operationId: getRideAvailability
+      tags: [rides]
+      summary: Get 30-min time slots with available driver counts for a given date/duration
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            description: "Date in YYYY-MM-DD format"
+        - name: duration
+          in: query
+          required: false
+          schema:
+            type: integer
+            description: "Estimated trip duration in minutes (default: 60)"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvailabilityResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /rides/active:
+    get:
+      operationId: getActiveRides
+      tags: [rides]
+      summary: Get open/active ride requests (for drivers browsing)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ride"
+
+  /rides/scheduled:
+    get:
+      operationId: getScheduledRides
+      tags: [rides]
+      summary: Get scheduled rides visible to current driver (public + directed)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ride"
+
+  /rides/{id}:
+    get:
+      operationId: getRide
+      tags: [rides]
+      summary: Get ride by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ride"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /rides/{id}/status:
+    patch:
+      operationId: updateRideStatus
+      tags: [rides]
+      summary: Update ride status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RideStatusUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ride"
+
+  /rides/{id}/cancel:
+    patch:
+      operationId: cancelRide
+      tags: [rides]
+      summary: Cancel ride
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ride"
+
+  /rides/{id}/accept-scheduled:
+    patch:
+      operationId: acceptScheduledRide
+      tags: [rides]
+      summary: Driver accepts a scheduled ride
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ride"
+        "409":
+          description: Conflict - driver has overlapping ride
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /rides/{id}/decline-scheduled:
+    patch:
+      operationId: declineScheduledRide
+      tags: [rides]
+      summary: Driver declines a scheduled ride
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduledRideDeclineInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ride"
+
+  # ── OFFERS ───────────────────────────────────────────────────────────────
+  /rides/{rideId}/offers:
+    get:
+      operationId: listOffers
+      tags: [offers]
+      summary: List offers for a ride
+      parameters:
+        - name: rideId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Offer"
+    post:
+      operationId: createOffer
+      tags: [offers]
+      summary: Driver makes a fare offer
+      parameters:
+        - name: rideId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfferInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Offer"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /rides/{rideId}/offers/{offerId}/accept:
+    patch:
+      operationId: acceptOffer
+      tags: [offers]
+      summary: Passenger accepts an offer
+      parameters:
+        - name: rideId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: offerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Offer"
+
+  /rides/{rideId}/offers/{offerId}/reject:
+    patch:
+      operationId: rejectOffer
+      tags: [offers]
+      summary: Passenger rejects an offer
+      parameters:
+        - name: rideId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: offerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Offer"
+
+  # ── ADMIN ─────────────────────────────────────────────────────────────────
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      summary: Platform statistics (admin)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+
+  /admin/recent-activity:
+    get:
+      operationId: getRecentActivity
+      tags: [admin]
+      summary: Recent platform activity feed (admin)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+
+  /admin/scheduled-rides:
+    get:
+      operationId: getAdminScheduledRides
+      tags: [admin]
+      summary: All scheduled rides (admin)
+      parameters:
+        - name: scheduledStatus
+          in: query
+          schema:
+            type: string
+            enum: [pending_acceptance, confirmed, driver_declined, cancelled]
+        - name: schedulingType
+          in: query
+          schema:
+            type: string
+            enum: [public, directed]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ride"
+
+  /admin/scheduled-rides/{id}/cancel:
+    patch:
+      operationId: adminCancelScheduledRide
+      tags: [admin]
+      summary: Cancel a scheduled ride (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCancelInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ride"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/scheduled-rides/{id}/reassign:
+    patch:
+      operationId: adminReassignScheduledRide
+      tags: [admin]
+      summary: Reassign a scheduled ride to a different driver (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminReassignInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ride"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    # ── AUTH ────────────────────────────────────────────────────────────────
+    RegisterInput:
+      type: object
+      required: [name, email, password, phone, role]
+      properties:
+        name:
+          type: string
+          minLength: 2
+        email:
+          type: string
+        password:
+          type: string
+          minLength: 6
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [passenger, driver]
+        cpf:
+          type: string
+        address:
+          type: string
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [user, token]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+
+    # ── USER ────────────────────────────────────────────────────────────────
+    User:
+      type: object
+      required: [id, name, email, phone, role, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [passenger, driver, admin]
+        avatarUrl:
+          type: ["string", "null"]
+        rating:
+          type: ["number", "null"]
+        totalRides:
+          type: integer
+        accountStatus:
+          type: string
+          enum: [pending, approved, denied]
+        createdAt:
+          type: string
+          format: date-time
+        driverProfile:
+          $ref: "#/components/schemas/DriverProfile"
+
+    UserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+
+    # ── DRIVER PROFILE ──────────────────────────────────────────────────────
+    DriverProfile:
+      type: object
+      required: [id, userId, status, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        status:
+          type: string
+          enum: [pending, approved, denied]
+        cpf:
+          type: ["string", "null"]
+        birthDate:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        state:
+          type: ["string", "null"]
+        cnhNumber:
+          type: ["string", "null"]
+        cnhCategory:
+          type: ["string", "null"]
+        cnhExpiry:
+          type: ["string", "null"]
+        vehicleMake:
+          type: ["string", "null"]
+        vehicleModel:
+          type: ["string", "null"]
+        vehicleYear:
+          type: ["integer", "null"]
+        vehicleColor:
+          type: ["string", "null"]
+        vehiclePlate:
+          type: ["string", "null"]
+        vehicleType:
+          type: ["string", "null"]
+          enum: [sedan, suv, hatch, pickup, moto, van, null]
+        photoUrl:
+          type: ["string", "null"]
+        cnhPhotoUrl:
+          type: ["string", "null"]
+        vehiclePhotoUrl:
+          type: ["string", "null"]
+        criminalRecordUrl:
+          type: ["string", "null"]
+        adminNote:
+          type: ["string", "null"]
+        reviewedAt:
+          type: ["string", "null"]
+        user:
+          $ref: "#/components/schemas/User"
+        createdAt:
+          type: string
+          format: date-time
+
+    DriverProfileInput:
+      type: object
+      required: [cpf, birthDate, address, city, state, cnhNumber, cnhCategory, cnhExpiry, vehicleMake, vehicleModel, vehicleYear, vehicleColor, vehiclePlate, vehicleType]
+      properties:
+        cpf:
+          type: string
+        birthDate:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        cnhNumber:
+          type: string
+        cnhCategory:
+          type: string
+        cnhExpiry:
+          type: string
+        vehicleMake:
+          type: string
+        vehicleModel:
+          type: string
+        vehicleYear:
+          type: integer
+        vehicleColor:
+          type: string
+        vehiclePlate:
+          type: string
+        vehicleType:
+          type: string
+          enum: [sedan, suv, hatch, pickup, moto, van]
+        photoUrl:
+          type: ["string", "null"]
+        cnhPhotoUrl:
+          type: ["string", "null"]
+        vehiclePhotoUrl:
+          type: ["string", "null"]
+        criminalRecordUrl:
+          type: ["string", "null"]
+
+    DriverDecisionInput:
+      type: object
+      properties:
+        adminNote:
+          type: ["string", "null"]
+
+    # ── RIDE ────────────────────────────────────────────────────────────────
+    Ride:
+      type: object
+      required: [id, passengerId, originAddress, originLat, originLng, destinationAddress, destinationLat, destinationLng, offeredPrice, status, isScheduled, createdAt]
+      properties:
+        id:
+          type: integer
+        passengerId:
+          type: integer
+        driverId:
+          type: ["integer", "null"]
+        originAddress:
+          type: string
+        originLat:
+          type: number
+        originLng:
+          type: number
+        destinationAddress:
+          type: string
+        destinationLat:
+          type: number
+        destinationLng:
+          type: number
+        offeredPrice:
+          type: number
+        agreedPrice:
+          type: ["number", "null"]
+        status:
+          type: string
+          enum: [open, negotiating, accepted, in_progress, completed, cancelled]
+        estimatedDistance:
+          type: ["number", "null"]
+        estimatedDuration:
+          type: ["integer", "null"]
+        startedAt:
+          type: ["string", "null"]
+        completedAt:
+          type: ["string", "null"]
+        cancelReason:
+          type: ["string", "null"]
+        isScheduled:
+          type: boolean
+        scheduledFor:
+          type: ["string", "null"]
+          format: date-time
+        schedulingType:
+          type: ["string", "null"]
+          enum: [public, directed, null]
+        directedToDriverId:
+          type: ["integer", "null"]
+        scheduledStatus:
+          type: ["string", "null"]
+          enum: [pending_acceptance, confirmed, driver_declined, cancelled, null]
+        scheduledNote:
+          type: ["string", "null"]
+        passenger:
+          $ref: "#/components/schemas/User"
+        driver:
+          $ref: "#/components/schemas/User"
+        offers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Offer"
+        driverLat:
+          type: ["number", "null"]
+        driverLng:
+          type: ["number", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    RideInput:
+      type: object
+      required: [originAddress, originLat, originLng, destinationAddress, destinationLat, destinationLng, offeredPrice]
+      properties:
+        originAddress:
+          type: string
+        originLat:
+          type: number
+        originLng:
+          type: number
+        destinationAddress:
+          type: string
+        destinationLat:
+          type: number
+        destinationLng:
+          type: number
+        offeredPrice:
+          type: number
+        estimatedDistance:
+          type: ["number", "null"]
+        estimatedDuration:
+          type: ["integer", "null"]
+        isScheduled:
+          type: boolean
+        scheduledFor:
+          type: ["string", "null"]
+          format: date-time
+        schedulingType:
+          type: ["string", "null"]
+          enum: [public, directed]
+        directedToDriverId:
+          type: ["integer", "null"]
+        scheduledNote:
+          type: ["string", "null"]
+
+    RideStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [in_progress, completed, cancelled]
+        cancelReason:
+          type: ["string", "null"]
+
+    ScheduledRideDeclineInput:
+      type: object
+      properties:
+        reason:
+          type: ["string", "null"]
+
+    AdminCancelInput:
+      type: object
+      properties:
+        reason:
+          type: ["string", "null"]
+
+    AdminReassignInput:
+      type: object
+      required: [driverId]
+      properties:
+        driverId:
+          type: integer
+
+    AvailabilitySlot:
+      type: object
+      required: [time, datetime, available, driverCount, totalDrivers]
+      properties:
+        time:
+          type: string
+          description: "HH:MM format"
+        datetime:
+          type: string
+          format: date-time
+        available:
+          type: boolean
+        driverCount:
+          type: integer
+        totalDrivers:
+          type: integer
+
+    AvailabilityResponse:
+      type: object
+      required: [date, duration, totalDrivers, slots]
+      properties:
+        date:
+          type: string
+        duration:
+          type: integer
+        totalDrivers:
+          type: integer
+        slots:
+          type: array
+          items:
+            $ref: "#/components/schemas/AvailabilitySlot"
+
+    # ── OFFER ───────────────────────────────────────────────────────────────
+    Offer:
+      type: object
+      required: [id, rideId, driverId, price, status, createdAt]
+      properties:
+        id:
+          type: integer
+        rideId:
+          type: integer
+        driverId:
+          type: integer
+        price:
+          type: number
+        message:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, accepted, rejected]
+        driver:
+          $ref: "#/components/schemas/User"
+        createdAt:
+          type: string
+          format: date-time
+
+    OfferInput:
+      type: object
+      required: [price]
+      properties:
+        price:
+          type: number
+        message:
+          type: ["string", "null"]
+
+    # ── ADMIN STATS ─────────────────────────────────────────────────────────
+    AdminStats:
+      type: object
+      required: [totalPassengers, totalDrivers, pendingDrivers, approvedDrivers, deniedDrivers, totalRides, activeRides, completedRides, cancelledRides, totalRevenue]
+      properties:
+        totalPassengers:
+          type: integer
+        totalDrivers:
+          type: integer
+        pendingDrivers:
+          type: integer
+        approvedDrivers:
+          type: integer
+        deniedDrivers:
+          type: integer
+        totalRides:
+          type: integer
+        activeRides:
+          type: integer
+        completedRides:
+          type: integer
+        cancelledRides:
+          type: integer
+        totalRevenue:
+          type: number
+
+    ActivityItem:
+      type: object
+      required: [id, type, description, createdAt]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [ride_completed, driver_registered, driver_approved, driver_denied, ride_cancelled, new_passenger]
+        description:
+          type: string
+        userId:
+          type: ["integer", "null"]
+        userName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time

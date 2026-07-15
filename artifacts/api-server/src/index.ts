@@ -1,5 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { seedDefaultAccounts } from "@workspace/db/seed";
+import { startAutoBackup } from "./lib/auto-backup";
 
 const rawPort = process.env["PORT"];
 
@@ -15,6 +17,10 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
+seedDefaultAccounts()
+  .then(() => logger.info("Seed de contas padrão concluído"))
+  .catch((err) => logger.warn({ err }, "Seed ignorado ou parcial"));
+
 app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
@@ -22,4 +28,5 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+  startAutoBackup();
 });

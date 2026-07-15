@@ -25,10 +25,25 @@ app.use(
     },
   }),
 );
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+const corsOrigin = process.env.CORS_ORIGIN;
+app.use(
+  cors({
+    origin: corsOrigin ? corsOrigin.split(",").map((o) => o.trim()) : true,
+    credentials: true,
+  }),
+);
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 app.use("/api", router);
+
+app.get("/", (_req, res) => {
+  const domain = process.env.REPLIT_DEV_DOMAIN;
+  if (domain) {
+    res.redirect(`https://${domain}`);
+  } else {
+    res.redirect("http://localhost:5000");
+  }
+});
 
 export default app;

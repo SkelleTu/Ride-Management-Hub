@@ -1,0 +1,4 @@
+- [Orval zod codegen + format:email](orval-zod-format-email.md) — avoid `format: email` in openapi.yaml; current zod catalog version breaks on it.
+- [React Query v5 + Orval generated hooks](react-query-v5-orval-hooks.md) — useQuery options need explicit queryKey and no onSuccess in this stack's catalog version.
+- [Importing a pre-built GitHub repo into this monorepo scaffold](importing-prebuilt-repo.md) — direct file-merge approach and what commonly needs fixing after.
+- [UPcar (rideshare-app) pricing rules](rideshare-pricing-rules.md) — fares always round to nearest R$5 via one shared util; passenger/driver rate formulas stay distinct on purpose.
